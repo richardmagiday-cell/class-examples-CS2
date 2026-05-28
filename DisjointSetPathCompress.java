@@ -3,7 +3,7 @@ Java code that implements disjontsets with Union by height and path compression*
 
 import java.util.*;
 
-public class DisjiontSetPathCompress {
+public class DisjointSetPathCompress {
 
 	// A little driver program to test our class.
 	public static void main(String[] args) {
@@ -13,7 +13,7 @@ public class DisjiontSetPathCompress {
 		System.out.println("How many items do you want in your Disjoint Set?");
 		int n = stdin.nextInt();
 
-		Main mySet = new Main(n); //make the sets
+		DisjointSetPathCompress mySet = new DisjointSetPathCompress(n); //make the sets
 
 		// Keep on going till the user wants to quit.
 		while (true) {
@@ -37,12 +37,13 @@ public class DisjiontSetPathCompress {
 				System.out.println("The union was successful, here is the new parent list: "+mySet);
 			}
 		}
+		stdin.close();
 	}
 
 	private pair[] parents;
 
 	// Create the initial state of a disjoint set of n elements, 0 to n-1.
-	public Main(int n) {
+	public DisjointSetPathCompress(int n) {
 
 		// All nodes start as leaf nodes.
 		parents = new pair[n];

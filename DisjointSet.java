@@ -15,7 +15,7 @@ public class DisjointSet {
 		System.out.println("How many items do you want in your Disjoint Set?");
 		int n = stdin.nextInt();
 
-		Main mySet = new Main(n); //make the sets
+		DisjointSet mySet = new DisjointSet(n); //make the sets
 
 		// Keep on going till the user wants to quit.
 		while (true) {
@@ -39,12 +39,14 @@ public class DisjointSet {
 				System.out.println("The union was successful, here is the new parent list: "+mySet);
 			}
 		}
+
+		stdin.close();
 	}
 
 	private pair[] parents;
 
 	// Create the initial state of a disjoint set of n elements, 0 to n-1.
-	public Main(int n) {
+	public DisjointSet(int n) {
 
 		// All nodes start as leaf nodes.
 		parents = new pair[n];
