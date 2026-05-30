@@ -1,0 +1,1291 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Magic Square Backtracking Visualizer</title>
+<style>
+    :root {
+        --bg: #f6f7fb;
+        --panel: #ffffff;
+        --ink: #1f2937;
+        --muted: #6b7280;
+        --border: #d8dee9;
+        --soft: #eef2ff;
+        --active: #fff3b0;
+        --active-border: #e4b100;
+        --cell: #f9fafb;
+        --good: #dcfce7;
+        --bad: #fee2e2;
+        --changed: #dbeafe;
+        --check: #fde68a;
+        --undo: #ffe4e6;
+        --shadow: 0 8px 22px rgba(15, 23, 42, 0.08);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+        margin: 0;
+        font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        color: var(--ink);
+        background: var(--bg);
+    }
+
+    header {
+        padding: 10px 14px;
+        border-bottom: 1px solid var(--border);
+        background: var(--panel);
+        position: sticky;
+        top: 0;
+        z-index: 5;
+    }
+
+    h1 {
+        font-size: 18px;
+        margin: 0 0 8px 0;
+        letter-spacing: -0.02em;
+    }
+
+    .toolbar {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 8px;
+        font-size: 13px;
+    }
+
+    button, select, input[type="number"] {
+        border: 1px solid var(--border);
+        background: #fff;
+        color: var(--ink);
+        border-radius: 8px;
+        padding: 7px 10px;
+        font-weight: 650;
+        cursor: pointer;
+    }
+
+    button:hover { background: #f3f4f6; }
+    button.primary { background: #111827; color: white; border-color: #111827; }
+    button.primary:hover { background: #374151; }
+    button.danger { background: #fff1f2; color: #9f1239; }
+    button:disabled { opacity: 0.45; cursor: not-allowed; }
+
+    .check-label {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        padding: 4px 7px;
+        border: 1px solid var(--border);
+        border-radius: 999px;
+        background: #fff;
+    }
+
+    .pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        border: 1px solid var(--border);
+        background: #f9fafb;
+        padding: 5px 8px;
+        border-radius: 999px;
+        font-weight: 700;
+    }
+
+    .layout {
+        height: calc(100vh - 92px);
+        min-height: 610px;
+        padding: 10px;
+        display: grid;
+        grid-template-columns: minmax(420px, 1.25fr) minmax(310px, 0.9fr) minmax(300px, 0.75fr);
+        gap: 10px;
+    }
+
+    .panel {
+        background: var(--panel);
+        border: 1px solid var(--border);
+        border-radius: 14px;
+        box-shadow: var(--shadow);
+        min-height: 0;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .panel-title {
+        padding: 10px 12px;
+        border-bottom: 1px solid var(--border);
+        font-weight: 800;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 8px;
+        font-size: 14px;
+    }
+
+    .panel-body {
+        padding: 10px;
+        overflow: auto;
+        min-height: 0;
+    }
+
+    .code-body {
+        padding: 0;
+        background: #0f172a;
+        color: #e5e7eb;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+        font-size: 12px;
+        line-height: 1.45;
+        overflow: auto;
+    }
+
+    .code-line {
+        display: grid;
+        grid-template-columns: 42px 1fr;
+        white-space: pre;
+        padding: 0 8px 0 0;
+        min-height: 18px;
+        border-left: 4px solid transparent;
+    }
+
+    .code-line .ln {
+        user-select: none;
+        text-align: right;
+        padding-right: 10px;
+        color: #94a3b8;
+    }
+
+    .code-line.active {
+        background: linear-gradient(90deg, rgba(253, 230, 138, 0.48), rgba(253, 230, 138, 0.22));
+        border-left-color: var(--active-border);
+        outline: 1px solid rgba(228, 177, 0, 0.7);
+        font-weight: 800;
+    }
+
+    .code-line.secondary {
+        background: rgba(219, 234, 254, 0.22);
+        border-left-color: #60a5fa;
+    }
+
+    .grid-wrap {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .magic-grid {
+        display: grid;
+        gap: 6px;
+        width: min(100%, 315px);
+        aspect-ratio: 1 / 1;
+    }
+
+    .cell {
+        background: var(--cell);
+        border: 2px solid var(--border);
+        border-radius: 10px;
+        display: grid;
+        place-items: center;
+        font-weight: 900;
+        font-size: clamp(18px, 4vw, 32px);
+        min-width: 0;
+        transition: transform .12s ease, background .12s ease, border-color .12s ease;
+        position: relative;
+    }
+
+    .cell.empty { color: #cbd5e1; }
+    .cell.checking { background: var(--check); border-color: #f59e0b; transform: scale(1.03); }
+    .cell.changed { background: var(--changed); border-color: #3b82f6; transform: scale(1.04); }
+    .cell.undo { background: var(--undo); border-color: #fb7185; transform: scale(1.04); }
+    .cell.good { background: var(--good); border-color: #22c55e; }
+
+    .cell::after {
+        content: attr(data-pos);
+        position: absolute;
+        bottom: 4px;
+        right: 6px;
+        font-size: 10px;
+        color: #94a3b8;
+        font-weight: 700;
+    }
+
+    .mini {
+        color: var(--muted);
+        font-size: 12px;
+        line-height: 1.35;
+    }
+
+    .summary {
+        background: #f8fafc;
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 10px;
+        line-height: 1.45;
+        font-size: 14px;
+        min-height: 104px;
+    }
+
+    .summary strong { color: #111827; }
+
+    .vars {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 6px;
+        margin-top: 8px;
+    }
+
+    .var {
+        border: 1px solid var(--border);
+        background: #f9fafb;
+        border-radius: 10px;
+        padding: 7px;
+        font-size: 12px;
+    }
+
+    .var b {
+        display: block;
+        font-size: 11px;
+        color: var(--muted);
+        text-transform: uppercase;
+        letter-spacing: .04em;
+    }
+
+    .possible-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(36px, 1fr));
+        gap: 5px;
+        margin-top: 8px;
+    }
+
+    .num-chip {
+        text-align: center;
+        border-radius: 8px;
+        border: 1px solid var(--border);
+        padding: 6px 0;
+        font-weight: 850;
+        background: #dcfce7;
+        color: #166534;
+    }
+
+    .num-chip.used {
+        background: #f1f5f9;
+        color: #94a3b8;
+        text-decoration: line-through;
+    }
+
+    .stack-list, .solutions-list {
+        display: flex;
+        flex-direction: column;
+        gap: 5px;
+        margin-top: 8px;
+    }
+
+    .stack-frame, .solution-card {
+        padding: 7px 8px;
+        border-radius: 10px;
+        border: 1px solid var(--border);
+        background: #f9fafb;
+        font-size: 12px;
+    }
+
+    .stack-frame.top {
+        border-color: #3b82f6;
+        background: #eff6ff;
+    }
+
+    .solution-card pre {
+        margin: 5px 0 0;
+        font-size: 11px;
+        line-height: 1.25;
+        white-space: pre-wrap;
+    }
+
+    .legend {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        justify-content: center;
+        font-size: 11px;
+    }
+
+    .legend span {
+        border: 1px solid var(--border);
+        border-radius: 999px;
+        padding: 3px 7px;
+        background: #fff;
+    }
+
+    .dot {
+        display: inline-block;
+        width: 10px;
+        height: 10px;
+        border-radius: 3px;
+        margin-right: 4px;
+        vertical-align: -1px;
+    }
+    .dot.checking { background: var(--check); }
+    .dot.changed { background: var(--changed); }
+    .dot.undo { background: var(--undo); }
+    .dot.good { background: var(--good); }
+
+    .notice {
+        margin-top: 8px;
+        padding: 8px;
+        background: #fff7ed;
+        border: 1px solid #fed7aa;
+        color: #9a3412;
+        border-radius: 10px;
+        font-size: 12px;
+        line-height: 1.35;
+    }
+
+    @media (max-width: 1050px) {
+        .layout {
+            height: auto;
+            grid-template-columns: 1fr;
+        }
+        .panel { min-height: 360px; }
+        .code-body { max-height: 520px; }
+    }
+</style>
+</head>
+<body>
+<header>
+    <h1>Magic Square Backtracking Visualizer</h1>
+    <div class="toolbar">
+        <label>N:
+            <select id="nSelect">
+                <option value="2">2</option>
+                <option value="3" selected>3</option>
+                <option value="4">4 (huge)</option>
+            </select>
+        </label>
+        <button id="resetBtn" class="primary">Reset</button>
+        <button id="backBtn">Back Step</button>
+        <button id="nextBtn">Next Step</button>
+        <button id="nextChangeBtn">Jump to Grid Change</button>
+        <button id="solutionBtn">Jump to Solution</button>
+        <button id="autoBtn">Auto Play</button>
+        <button id="stopBtn" class="danger">Stop</button>
+        <label class="check-label"><input id="detailChecks" type="checkbox" checked /> detailed validSquare()</label>
+        <label>Speed:
+            <input id="speedInput" type="number" min="20" max="1500" step="20" value="220" style="width:78px" /> ms
+        </label>
+        <span class="pill">Steps: <span id="stepCount">0</span></span>
+        <span class="pill">Solutions: <span id="solutionCount">0</span></span>
+    </div>
+</header>
+
+<main class="layout">
+    <section class="panel">
+        <div class="panel-title">
+            <span>Java Code Highlight</span>
+            <span id="activeLineBadge" class="mini">yellow = current line</span>
+        </div>
+        <div id="codePanel" class="panel-body code-body"></div>
+    </section>
+
+    <section class="panel">
+        <div class="panel-title">
+            <span>Grid + Number Availability</span>
+            <span id="magicConstBadge" class="pill">Magic = 15</span>
+        </div>
+        <div class="panel-body">
+            <div class="grid-wrap">
+                <div id="grid" class="magic-grid"></div>
+                <div class="legend">
+                    <span><i class="dot checking"></i>checking</span>
+                    <span><i class="dot changed"></i>placed</span>
+                    <span><i class="dot undo"></i>undone</span>
+                    <span><i class="dot good"></i>solution</span>
+                </div>
+            </div>
+
+            <div class="notice">
+                For sharing: this is one HTML file. Download it, send it, and classmates can open it directly in Chrome/Edge/Safari.
+            </div>
+
+            <h3 style="font-size:14px;margin:12px 0 4px;">possible[]</h3>
+            <div id="possibleGrid" class="possible-grid"></div>
+        </div>
+    </section>
+
+    <section class="panel">
+        <div class="panel-title">
+            <span>What Is Happening?</span>
+            <span class="mini">summary + variables</span>
+        </div>
+        <div class="panel-body">
+            <div id="summary" class="summary">Press <strong>Reset</strong>, then <strong>Next Step</strong>. Use <strong>Back Step</strong> to rewind.</div>
+            <div class="vars">
+                <div class="var"><b>Current call</b><span id="currentCall">fill(0, 0)</span></div>
+                <div class="var"><b>Trying i</b><span id="tryingI">—</span></div>
+                <div class="var"><b>rowSum</b><span id="rowSum">—</span></div>
+                <div class="var"><b>colSum</b><span id="colSum">—</span></div>
+                <div class="var"><b>diaglSum</b><span id="diagSum">—</span></div>
+                <div class="var"><b>diaglSum2 / len</b><span id="diagSum2">—</span></div>
+            </div>
+
+            <h3 style="font-size:14px;margin:12px 0 4px;">Call Stack</h3>
+            <div id="stackList" class="stack-list"></div>
+
+            <h3 style="font-size:14px;margin:12px 0 4px;">Solutions Found</h3>
+            <div id="solutionsList" class="solutions-list"></div>
+        </div>
+    </section>
+</main>
+
+<script>
+const LAB_CODE = "package labs.lab2;\n\nimport java.util.Scanner;\nimport java.util.Arrays;\n\npublic class Main {\n    static Scanner in = new Scanner(System.in);\n    private int[][] square;\n    private int magicConst;\n    private int totalSqs;\n    private boolean[] possible;\n    private int numSquares;\n\n    public int findMagicConstant(int N) {\n        return N * ((N * N) + 1) / 2;\n    }\n\n    public Main(int N) {\n        if (N < 2) {\n            System.out.println(\"Only give valyes > 2!\");\n            System.exit(1);\n        }\n        square = new int[N][N];\n        magicConst = this.findMagicConstant(N);\n        totalSqs = N * N;\n\n        possible = new boolean[totalSqs];\n        for (int i = 0; i < totalSqs; i++) {\n            possible[i] = true;\n        }\n\n        numSquares = 0;\n    }\n\n    public boolean validSquare() {\n        //row sum check\n        for (int i = 0; i < square.length; i++) {\n            int rowSum = 0;\n\n            for (int j = 0; j < square.length; j++) {\n                rowSum += square[i][j];\n\n                if (square[i][j] == 0) {\n                    return false;\n                }\n            }\n            if (rowSum != magicConst) {\n                return false;\n            }\n        }//col sum check\n        for (int i = 0; i < square.length; i++) {\n            int colSum = 0;\n\n            for (int j = 0; j < square.length; j++) {\n                colSum += square[j][i];\n\n                if (square[j][i] == 0) {\n                    return false;\n                }\n            }\n            if (colSum != magicConst) {\n                return false;\n            }\n        }\n        //diagl sum check\n        int diaglSum = 0;\n        for(int r = 0; r < square.length; r++){\n            diaglSum += square[r][r];\n\n            if(square[r][r] == 0){\n                return false;\n            }\n        }\n        if(diaglSum != magicConst){\n            return false;\n        }\n\n        //diagl2 sum check\n        int diaglSum2 = 0;\n        int len = square.length;\n        for(int r = 0; r < square.length; r++){\n            diaglSum2 += square[r][len-1];\n\n            if(square[r][len-1] == 0){\n                return false;\n            }\n            len--;\n        }\n        if(diaglSum2 != magicConst){\n            return false;\n        }\n\n        return true;\n\n    }\n\n    public void fill(int row, int col) {\n        if (validSquare()) {\n            System.out.println(\"Done!!\");\n\n            for (int[] rws : square) {\n                System.out.println(Arrays.toString(rws));\n            }\n            numSquares++;\n            return;\n        }\n\n        if (row == square.length) {\n            return;\n        }\n\n        for (int i = 0; i < totalSqs; i++) {\n            if (possible[i]) {\n                square[row][col] = i + 1;\n                possible[i] = false;\n\n                int nextCol = col + 1;\n                int nextRow = row;\n\n                if (nextCol == square.length) {\n                    nextRow++;\n                    nextCol = 0;\n                }\n                fill(nextRow, nextCol);\n\n                square[row][col] = 0;\n                possible[i] = true;\n            }\n        }\n    }\n\n    public static void main(String[] args) {\n        int N = in.nextInt();\n        System.out.println(\"N = \" + N);\n        Main ms = new Main(N);\n        ms.fill(0, 0);\n    }\n}";
+
+const state = {
+    N: 3,
+    square: [],
+    possible: [],
+    magicConst: 15,
+    totalSqs: 9,
+    numSquares: 0,
+    stepCount: 0,
+    generator: null,
+    lastEvent: null,
+    autoTimer: null,
+    done: false,
+    stack: [],
+    runningSkip: false,
+    history: [],
+    replayIndex: -1
+};
+
+function escapeHTML(str) {
+    return str
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;");
+}
+
+function magicConstant(N) {
+    return N * ((N * N) + 1) / 2;
+}
+
+function deepCopyGrid(grid) {
+    return grid.map(row => row.slice());
+}
+
+function gridToText(grid) {
+    return grid.map(row => "[" + row.join(", ") + "]").join("\n");
+}
+
+function renderCode() {
+    const lines = LAB_CODE.split("\n");
+    const html = lines.map((line, idx) => {
+        const n = idx + 1;
+        return `<div class="code-line" data-line="${n}"><span class="ln">${n}</span><span>${escapeHTML(line)}</span></div>`;
+    }).join("");
+    document.getElementById("codePanel").innerHTML = html;
+}
+
+function setHighlightedLines(lines = [], secondary = []) {
+    document.querySelectorAll(".code-line").forEach(el => {
+        el.classList.remove("active", "secondary");
+    });
+
+    secondary.forEach(n => {
+        const el = document.querySelector(`.code-line[data-line="${n}"]`);
+        if (el) el.classList.add("secondary");
+    });
+
+    let firstActive = null;
+
+    lines.forEach(n => {
+        const el = document.querySelector(`.code-line[data-line="${n}"]`);
+        if (el) {
+            el.classList.add("active");
+            if (!firstActive) firstActive = el;
+        }
+    });
+
+    const badge = document.getElementById("activeLineBadge");
+    if (badge) {
+        badge.textContent = lines.length ? `current line: ${lines.join(", ")}` : "yellow = current line";
+    }
+
+    if (firstActive) {
+        const panel = document.getElementById("codePanel");
+        const targetTop = firstActive.offsetTop - (panel.clientHeight / 2) + (firstActive.clientHeight / 2);
+        panel.scrollTo({
+            top: Math.max(0, targetTop),
+            behavior: "smooth"
+        });
+    }
+}
+
+function createBlankGrid(N) {
+    return Array.from({ length: N }, () => Array(N).fill(0));
+}
+
+function renderGrid(event = {}) {
+    const gridEl = document.getElementById("grid");
+    gridEl.style.gridTemplateColumns = `repeat(${state.N}, 1fr)`;
+    const activeMap = new Map();
+    (event.cells || []).forEach(c => activeMap.set(`${c.r},${c.c}`, c.kind || "checking"));
+
+    let html = "";
+    for (let r = 0; r < state.N; r++) {
+        for (let c = 0; c < state.N; c++) {
+            const val = state.square[r][c];
+            const kind = activeMap.get(`${r},${c}`) || "";
+            html += `<div class="cell ${val === 0 ? "empty" : ""} ${kind}" data-pos="[${r}][${c}]">${val === 0 ? "·" : val}</div>`;
+        }
+    }
+    gridEl.innerHTML = html;
+}
+
+function renderPossible(event = {}) {
+    const el = document.getElementById("possibleGrid");
+    let html = "";
+    for (let i = 0; i < state.totalSqs; i++) {
+        const used = !state.possible[i];
+        html += `<div class="num-chip ${used ? "used" : ""}">${i + 1}</div>`;
+    }
+    el.innerHTML = html;
+}
+
+function renderStack() {
+    const el = document.getElementById("stackList");
+    if (state.stack.length === 0) {
+        el.innerHTML = `<div class="stack-frame">No active recursive calls yet.</div>`;
+        return;
+    }
+    const frames = state.stack.slice().reverse().map((frame, idx) => {
+        return `<div class="stack-frame ${idx === 0 ? "top" : ""}">fill(row=${frame.row}, col=${frame.col}) ${idx === 0 ? "← current" : ""}</div>`;
+    }).join("");
+    el.innerHTML = frames;
+}
+
+function renderSolutions() {
+    const el = document.getElementById("solutionsList");
+    if (!state.solutions || state.solutions.length === 0) {
+        el.innerHTML = `<div class="solution-card">None yet.</div>`;
+        return;
+    }
+    el.innerHTML = state.solutions.slice(-3).reverse().map((grid, idx) => {
+        const number = state.solutions.length - idx;
+        return `<div class="solution-card"><strong>Solution ${number}</strong><pre>${gridToText(grid)}</pre></div>`;
+    }).join("");
+}
+
+function renderVars(event = {}) {
+    document.getElementById("currentCall").textContent =
+        state.stack.length ? `fill(${state.stack[state.stack.length - 1].row}, ${state.stack[state.stack.length - 1].col})` : "—";
+    document.getElementById("tryingI").textContent = event.i !== undefined ? `${event.i} → number ${event.i + 1}` : "—";
+    document.getElementById("rowSum").textContent = event.rowSum !== undefined ? event.rowSum : "—";
+    document.getElementById("colSum").textContent = event.colSum !== undefined ? event.colSum : "—";
+    document.getElementById("diagSum").textContent = event.diagSum !== undefined ? event.diagSum : "—";
+    document.getElementById("diagSum2").textContent =
+        event.diagSum2 !== undefined ? `${event.diagSum2}${event.len !== undefined ? " / len=" + event.len : ""}` : "—";
+}
+
+
+function cloneEvent(event) {
+    return JSON.parse(JSON.stringify(event || {}));
+}
+
+function captureSnapshot() {
+    return {
+        N: state.N,
+        square: deepCopyGrid(state.square),
+        possible: state.possible.slice(),
+        magicConst: state.magicConst,
+        totalSqs: state.totalSqs,
+        numSquares: state.numSquares,
+        stepCount: state.stepCount,
+        done: state.done,
+        stack: state.stack.map(frame => ({ ...frame })),
+        solutions: (state.solutions || []).map(grid => deepCopyGrid(grid)),
+        lastEvent: cloneEvent(state.lastEvent)
+    };
+}
+
+function restoreSnapshot(snapshot) {
+    state.N = snapshot.N;
+    state.square = deepCopyGrid(snapshot.square);
+    state.possible = snapshot.possible.slice();
+    state.magicConst = snapshot.magicConst;
+    state.totalSqs = snapshot.totalSqs;
+    state.numSquares = snapshot.numSquares;
+    state.stepCount = snapshot.stepCount;
+    state.done = snapshot.done;
+    state.stack = snapshot.stack.map(frame => ({ ...frame }));
+    state.solutions = (snapshot.solutions || []).map(grid => deepCopyGrid(grid));
+    state.lastEvent = cloneEvent(snapshot.lastEvent);
+    render(state.lastEvent);
+}
+
+function pushHistory() {
+    // If the user went backward and then starts stepping normally, keep the future
+    // history only until the current replay position.
+    if (state.replayIndex < state.history.length - 1) {
+        state.history = state.history.slice(0, state.replayIndex + 1);
+    }
+
+    state.history.push(captureSnapshot());
+    state.replayIndex = state.history.length - 1;
+    updateBackButton();
+}
+
+function updateBackButton() {
+    const backBtn = document.getElementById("backBtn");
+    if (backBtn) backBtn.disabled = state.replayIndex <= 0;
+}
+
+function backStep() {
+    stopAuto();
+
+    if (state.replayIndex > 0) {
+        state.replayIndex--;
+        restoreSnapshot(state.history[state.replayIndex]);
+        updateBackButton();
+    }
+}
+
+function render(event = {}) {
+    state.lastEvent = event;
+    setHighlightedLines(event.lines || [], event.secondaryLines || []);
+    renderGrid(event);
+    renderPossible(event);
+    renderStack();
+    renderSolutions();
+    renderVars(event);
+    document.getElementById("summary").innerHTML = event.summary || "Ready.";
+    document.getElementById("stepCount").textContent = state.stepCount;
+    document.getElementById("solutionCount").textContent = state.numSquares;
+    document.getElementById("magicConstBadge").textContent = `Magic = ${state.magicConst}`;
+    updateBackButton();
+}
+
+function makeEvent(partial) {
+    return {
+        lines: [],
+        cells: [],
+        summary: "",
+        type: "info",
+        ...partial
+    };
+}
+
+function* validSquareGen() {
+    const detailed = document.getElementById("detailChecks").checked;
+
+    yield makeEvent({
+        lines: [35, 98],
+        type: "valid-call",
+        summary: `The code calls <strong>validSquare()</strong> before placing the next number. It asks: “Is the whole grid already a finished magic square?”`
+    });
+
+    if (!detailed) {
+        const result = actualValidSquareFast();
+        yield makeEvent({
+            lines: [93],
+            type: "valid-result",
+            summary: result
+                ? `<strong>validSquare()</strong> returned true. Every row, column, and diagonal matched the magic constant.`
+                : `<strong>validSquare()</strong> returned false. The grid is not complete/valid yet.`
+        });
+        return result;
+    }
+
+    // row sum check
+    yield makeEvent({ lines: [36], type: "check", summary: `Start the <strong>row sum check</strong>. Every row must add to ${state.magicConst}, and no cell can be 0.` });
+
+    for (let i = 0; i < state.N; i++) {
+        let rowSum = 0;
+        yield makeEvent({ lines: [37, 38], rowSum, type: "check", summary: `Checking row <strong>${i}</strong>. Set <code>rowSum = 0</code>.` });
+
+        for (let j = 0; j < state.N; j++) {
+            rowSum += state.square[i][j];
+            yield makeEvent({
+                lines: [40, 41],
+                cells: [{ r: i, c: j, kind: "checking" }],
+                rowSum,
+                type: "check",
+                summary: `Add <code>square[${i}][${j}]</code> to <code>rowSum</code>. Current rowSum = <strong>${rowSum}</strong>.`
+            });
+
+            yield makeEvent({
+                lines: [43],
+                cells: [{ r: i, c: j, kind: "checking" }],
+                rowSum,
+                type: "check",
+                summary: `Check whether <code>square[${i}][${j}] == 0</code>. A 0 means the square is not filled yet.`
+            });
+
+            if (state.square[i][j] === 0) {
+                yield makeEvent({
+                    lines: [44],
+                    cells: [{ r: i, c: j, kind: "undo" }],
+                    rowSum,
+                    type: "valid-false",
+                    summary: `<code>square[${i}][${j}]</code> is 0, so <strong>validSquare() returns false</strong>. The fill method will keep trying numbers.`
+                });
+                return false;
+            }
+        }
+
+        yield makeEvent({
+            lines: [47],
+            rowSum,
+            type: "check",
+            summary: `Finished row ${i}. Now check whether rowSum ${rowSum} equals magicConst ${state.magicConst}.`
+        });
+
+        if (rowSum !== state.magicConst) {
+            yield makeEvent({
+                lines: [48],
+                rowSum,
+                type: "valid-false",
+                summary: `Row ${i} adds to ${rowSum}, not ${state.magicConst}. <strong>validSquare() returns false</strong>.`
+            });
+            return false;
+        }
+    }
+
+    // column sum check
+    yield makeEvent({ lines: [50], type: "check", summary: `Rows passed. Now start the <strong>column sum check</strong>.` });
+
+    for (let i = 0; i < state.N; i++) {
+        let colSum = 0;
+        yield makeEvent({ lines: [51, 52], colSum, type: "check", summary: `Checking column <strong>${i}</strong>. Set <code>colSum = 0</code>.` });
+
+        for (let j = 0; j < state.N; j++) {
+            colSum += state.square[j][i];
+            yield makeEvent({
+                lines: [54, 55],
+                cells: [{ r: j, c: i, kind: "checking" }],
+                colSum,
+                type: "check",
+                summary: `Add <code>square[${j}][${i}]</code> to <code>colSum</code>. Current colSum = <strong>${colSum}</strong>.`
+            });
+
+            yield makeEvent({
+                lines: [57],
+                cells: [{ r: j, c: i, kind: "checking" }],
+                colSum,
+                type: "check",
+                summary: `Check whether <code>square[${j}][${i}] == 0</code>.`
+            });
+
+            if (state.square[j][i] === 0) {
+                yield makeEvent({
+                    lines: [58],
+                    cells: [{ r: j, c: i, kind: "undo" }],
+                    colSum,
+                    type: "valid-false",
+                    summary: `<code>square[${j}][${i}]</code> is 0, so <strong>validSquare() returns false</strong>.`
+                });
+                return false;
+            }
+        }
+
+        yield makeEvent({
+            lines: [61],
+            colSum,
+            type: "check",
+            summary: `Finished column ${i}. Now check whether colSum ${colSum} equals magicConst ${state.magicConst}.`
+        });
+
+        if (colSum !== state.magicConst) {
+            yield makeEvent({
+                lines: [62],
+                colSum,
+                type: "valid-false",
+                summary: `Column ${i} adds to ${colSum}, not ${state.magicConst}. <strong>validSquare() returns false</strong>.`
+            });
+            return false;
+        }
+    }
+
+    // diagonal 1
+    let diaglSum = 0;
+    yield makeEvent({ lines: [65, 66], diagSum: diaglSum, type: "check", summary: `Rows and columns passed. Now check the main diagonal: top-left to bottom-right.` });
+
+    for (let r = 0; r < state.N; r++) {
+        diaglSum += state.square[r][r];
+        yield makeEvent({
+            lines: [67, 68],
+            cells: [{ r, c: r, kind: "checking" }],
+            diagSum: diaglSum,
+            type: "check",
+            summary: `Add <code>square[${r}][${r}]</code>. Main diagonal sum is now <strong>${diaglSum}</strong>.`
+        });
+
+        yield makeEvent({
+            lines: [70],
+            cells: [{ r, c: r, kind: "checking" }],
+            diagSum: diaglSum,
+            type: "check",
+            summary: `Check whether <code>square[${r}][${r}] == 0</code>.`
+        });
+
+        if (state.square[r][r] === 0) {
+            yield makeEvent({
+                lines: [71],
+                cells: [{ r, c: r, kind: "undo" }],
+                diagSum: diaglSum,
+                type: "valid-false",
+                summary: `That diagonal cell is 0, so <strong>validSquare() returns false</strong>.`
+            });
+            return false;
+        }
+    }
+
+    yield makeEvent({
+        lines: [74],
+        diagSum: diaglSum,
+        type: "check",
+        summary: `Main diagonal sum is ${diaglSum}. Check whether it equals ${state.magicConst}.`
+    });
+
+    if (diaglSum !== state.magicConst) {
+        yield makeEvent({
+            lines: [75],
+            diagSum: diaglSum,
+            type: "valid-false",
+            summary: `Main diagonal does not match the magic constant, so <strong>validSquare() returns false</strong>.`
+        });
+        return false;
+    }
+
+    // diagonal 2
+    let diaglSum2 = 0;
+    let len = state.N;
+    yield makeEvent({
+        lines: [78, 79, 80],
+        diagSum2: diaglSum2,
+        len,
+        type: "check",
+        summary: `Now check your second diagonal: top-right to bottom-left. Start with <code>len = square.length</code>.`
+    });
+
+    for (let r = 0; r < state.N; r++) {
+        const c = len - 1;
+        diaglSum2 += state.square[r][c];
+        yield makeEvent({
+            lines: [81, 82],
+            cells: [{ r, c, kind: "checking" }],
+            diagSum2: diaglSum2,
+            len,
+            type: "check",
+            summary: `Use <code>square[${r}][len - 1]</code>, which is <code>square[${r}][${c}]</code>. Add it. diaglSum2 = <strong>${diaglSum2}</strong>.`
+        });
+
+        yield makeEvent({
+            lines: [84],
+            cells: [{ r, c, kind: "checking" }],
+            diagSum2: diaglSum2,
+            len,
+            type: "check",
+            summary: `Check whether <code>square[${r}][${c}] == 0</code>. This checks the same cell before <code>len--</code>.`
+        });
+
+        if (state.square[r][c] === 0) {
+            yield makeEvent({
+                lines: [85],
+                cells: [{ r, c, kind: "undo" }],
+                diagSum2: diaglSum2,
+                len,
+                type: "valid-false",
+                summary: `That second-diagonal cell is 0, so <strong>validSquare() returns false</strong>.`
+            });
+            return false;
+        }
+
+        len--;
+        yield makeEvent({
+            lines: [87],
+            cells: [{ r, c, kind: "checking" }],
+            diagSum2: diaglSum2,
+            len,
+            type: "check",
+            summary: `Now do <code>len--</code>. Next row will look one column to the left.`
+        });
+    }
+
+    yield makeEvent({
+        lines: [89],
+        diagSum2: diaglSum2,
+        len,
+        type: "check",
+        summary: `Second diagonal sum is ${diaglSum2}. Check whether it equals ${state.magicConst}.`
+    });
+
+    if (diaglSum2 !== state.magicConst) {
+        yield makeEvent({
+            lines: [90],
+            diagSum2: diaglSum2,
+            len,
+            type: "valid-false",
+            summary: `Second diagonal does not match the magic constant, so <strong>validSquare() returns false</strong>.`
+        });
+        return false;
+    }
+
+    yield makeEvent({
+        lines: [93],
+        type: "valid-true",
+        cells: allCells("good"),
+        summary: `Everything matched. <strong>validSquare() returns true</strong>. This grid is a magic square.`
+    });
+    return true;
+}
+
+function actualValidSquareFast() {
+    for (let i = 0; i < state.N; i++) {
+        let rowSum = 0;
+        for (let j = 0; j < state.N; j++) {
+            rowSum += state.square[i][j];
+            if (state.square[i][j] === 0) return false;
+        }
+        if (rowSum !== state.magicConst) return false;
+    }
+
+    for (let i = 0; i < state.N; i++) {
+        let colSum = 0;
+        for (let j = 0; j < state.N; j++) {
+            colSum += state.square[j][i];
+            if (state.square[j][i] === 0) return false;
+        }
+        if (colSum !== state.magicConst) return false;
+    }
+
+    let diaglSum = 0;
+    for (let r = 0; r < state.N; r++) {
+        diaglSum += state.square[r][r];
+        if (state.square[r][r] === 0) return false;
+    }
+    if (diaglSum !== state.magicConst) return false;
+
+    let diaglSum2 = 0;
+    let len = state.N;
+    for (let r = 0; r < state.N; r++) {
+        diaglSum2 += state.square[r][len - 1];
+        if (state.square[r][len - 1] === 0) return false;
+        len--;
+    }
+    if (diaglSum2 !== state.magicConst) return false;
+
+    return true;
+}
+
+function allCells(kind) {
+    const cells = [];
+    for (let r = 0; r < state.N; r++) {
+        for (let c = 0; c < state.N; c++) cells.push({ r, c, kind });
+    }
+    return cells;
+}
+
+function* fillGen(row, col) {
+    state.stack.push({ row, col });
+    yield makeEvent({
+        lines: [97],
+        type: "call",
+        summary: `Enter <code>fill(row=${row}, col=${col})</code>. This recursive call is responsible for this grid position.`
+    });
+
+    yield makeEvent({
+        lines: [98],
+        type: "check",
+        summary: `First line inside <code>fill</code>: check whether the current board is already a complete magic square.`
+    });
+
+    const valid = yield* validSquareGen();
+
+    yield makeEvent({
+        lines: [98],
+        type: "check",
+        summary: `<code>validSquare()</code> returned <strong>${valid}</strong>. ${valid ? "So the code enters the if-block." : "So the code skips the Done block and keeps filling."}`
+    });
+
+    if (valid) {
+        yield makeEvent({
+            lines: [99, 101, 102, 104, 105],
+            cells: allCells("good"),
+            type: "solution",
+            summary: `<strong>Done!!</strong> The code prints the grid, increments <code>numSquares</code>, and returns from this recursive call.`
+        });
+        state.numSquares++;
+        if (!state.solutions) state.solutions = [];
+        state.solutions.push(deepCopyGrid(state.square));
+        state.stack.pop();
+        return;
+    }
+
+    yield makeEvent({
+        lines: [108],
+        type: "check",
+        summary: `Check the base case: <code>if (row == square.length)</code>. If row is past the last row, this path is finished.`
+    });
+
+    if (row === state.N) {
+        yield makeEvent({
+            lines: [109],
+            type: "dead-end",
+            summary: `row is ${row}, which equals square.length. This path filled the whole board but was not valid, so return.`
+        });
+        state.stack.pop();
+        return;
+    }
+
+    for (let i = 0; i < state.totalSqs; i++) {
+        yield makeEvent({
+            lines: [112],
+            i,
+            type: "loop",
+            summary: `Loop tries <code>i = ${i}</code>, meaning number <strong>${i + 1}</strong>.`
+        });
+
+        yield makeEvent({
+            lines: [113],
+            i,
+            type: "check",
+            summary: `Check <code>possible[${i}]</code>. It is <strong>${state.possible[i]}</strong>. ${state.possible[i] ? "So this number can be placed." : "This number is already used, so skip it."}`
+        });
+
+        if (state.possible[i]) {
+            state.square[row][col] = i + 1;
+            yield makeEvent({
+                lines: [114],
+                cells: [{ r: row, c: col, kind: "changed" }],
+                i,
+                type: "assign",
+                summary: `Place number <strong>${i + 1}</strong> into <code>square[${row}][${col}]</code>. This is the “choose” step.`
+            });
+
+            state.possible[i] = false;
+            yield makeEvent({
+                lines: [115],
+                cells: [{ r: row, c: col, kind: "changed" }],
+                i,
+                type: "mark-used",
+                summary: `Set <code>possible[${i}] = false</code>, because number ${i + 1} is now used.`
+            });
+
+            let nextCol = col + 1;
+            let nextRow = row;
+            yield makeEvent({
+                lines: [117, 118],
+                cells: [{ r: row, c: col, kind: "changed" }],
+                i,
+                type: "next-cell",
+                summary: `Compute the next position. Start with <code>nextCol = col + 1 = ${nextCol}</code> and <code>nextRow = row = ${nextRow}</code>.`
+            });
+
+            yield makeEvent({
+                lines: [120],
+                cells: [{ r: row, c: col, kind: "changed" }],
+                i,
+                type: "check",
+                summary: `Check whether <code>nextCol == square.length</code>. If true, move to the next row.`
+            });
+
+            if (nextCol === state.N) {
+                nextRow++;
+                nextCol = 0;
+                yield makeEvent({
+                    lines: [121, 122],
+                    cells: [{ r: row, c: col, kind: "changed" }],
+                    i,
+                    type: "next-row",
+                    summary: `nextCol reached the end of the row, so move to <code>nextRow = ${nextRow}</code> and reset <code>nextCol = 0</code>.`
+                });
+            }
+
+            yield makeEvent({
+                lines: [124],
+                cells: [{ r: row, c: col, kind: "changed" }],
+                i,
+                type: "recurse",
+                summary: `Recursive call: <code>fill(${nextRow}, ${nextCol})</code>. The program now goes deeper and tries to fill the next cell.`
+            });
+
+            yield* fillGen(nextRow, nextCol);
+
+            yield makeEvent({
+                lines: [126],
+                cells: [{ r: row, c: col, kind: "undo" }],
+                i,
+                type: "undo",
+                summary: `Backtracking: after returning from deeper calls, reset <code>square[${row}][${col}] = 0</code>. This removes the choice.`
+            });
+            state.square[row][col] = 0;
+
+            yield makeEvent({
+                lines: [127],
+                cells: [{ r: row, c: col, kind: "undo" }],
+                i,
+                type: "unmark",
+                summary: `Set <code>possible[${i}] = true</code>. Number ${i + 1} becomes available again for another branch. This is the “unchoose” step.`
+            });
+            state.possible[i] = true;
+        }
+    }
+
+    yield makeEvent({
+        lines: [129, 130],
+        type: "return",
+        summary: `The for-loop tried every number for <code>square[${row}][${col}]</code>. Return to the previous recursive call.`
+    });
+    state.stack.pop();
+}
+
+function reset() {
+    stopAuto();
+    state.N = parseInt(document.getElementById("nSelect").value, 10);
+    state.totalSqs = state.N * state.N;
+    state.magicConst = magicConstant(state.N);
+    state.square = createBlankGrid(state.N);
+    state.possible = Array(state.totalSqs).fill(true);
+    state.numSquares = 0;
+    state.stepCount = 0;
+    state.done = false;
+    state.stack = [];
+    state.solutions = [];
+    state.history = [];
+    state.replayIndex = -1;
+    state.generator = fillGen(0, 0);
+    render(makeEvent({
+        lines: [132, 133, 134, 135, 136],
+        type: "reset",
+        summary: `Initialized N = <strong>${state.N}</strong>. magicConst = <strong>${state.magicConst}</strong>. Press <strong>Next Step</strong> to begin <code>fill(0, 0)</code>.`
+    }));
+    pushHistory();
+}
+
+function nextStep() {
+    if (!state.generator) return;
+
+    // If we are viewing older history, move forward through already-created
+    // snapshots first. This makes Back/Next feel exactly like a debugger.
+    if (state.replayIndex < state.history.length - 1) {
+        state.replayIndex++;
+        restoreSnapshot(state.history[state.replayIndex]);
+        updateBackButton();
+        return;
+    }
+
+    if (state.done) return;
+
+    const result = state.generator.next();
+    if (result.done) {
+        state.done = true;
+        stopAuto();
+        render(makeEvent({
+            lines: [138],
+            type: "done",
+            summary: `The search is finished. Total magic squares found: <strong>${state.numSquares}</strong>.`
+        }));
+        pushHistory();
+        return;
+    }
+
+    state.stepCount++;
+    render(result.value);
+    pushHistory();
+}
+
+function jumpUntil(predicate, maxSteps = 60000) {
+    if (state.runningSkip) return;
+    state.runningSkip = true;
+    let count = 0;
+    let last = null;
+
+    while (count < maxSteps) {
+        // Walk forward through already-created history first.
+        if (state.replayIndex < state.history.length - 1) {
+            state.replayIndex++;
+            restoreSnapshot(state.history[state.replayIndex]);
+            last = state.lastEvent;
+            if (predicate(last)) break;
+            count++;
+            continue;
+        }
+
+        if (state.done) break;
+
+        const result = state.generator.next();
+        if (result.done) {
+            state.done = true;
+            last = makeEvent({
+                lines: [138],
+                type: "done",
+                summary: `The search is finished. Total magic squares found: <strong>${state.numSquares}</strong>.`
+            });
+            render(last);
+            pushHistory();
+            break;
+        }
+
+        state.stepCount++;
+        last = result.value;
+        render(last);
+        pushHistory();
+
+        if (predicate(last)) break;
+        count++;
+    }
+
+    state.runningSkip = false;
+
+    if (last && count >= maxSteps && !predicate(last)) {
+        last.summary += `<br><br><strong>Paused:</strong> reached the safety step limit for this jump. Press again to continue.`;
+        render(last);
+        state.history[state.replayIndex] = captureSnapshot();
+    }
+
+    updateBackButton();
+}
+
+function jumpToGridChange() {
+    jumpUntil(ev => ["assign", "undo", "solution", "done"].includes(ev.type), 40000);
+}
+
+function jumpToSolution() {
+    jumpUntil(ev => ["solution", "done"].includes(ev.type), 220000);
+}
+
+function autoPlay() {
+    stopAuto();
+    const ms = Math.max(20, parseInt(document.getElementById("speedInput").value || "220", 10));
+    state.autoTimer = setInterval(nextStep, ms);
+}
+
+function stopAuto() {
+    if (state.autoTimer) clearInterval(state.autoTimer);
+    state.autoTimer = null;
+}
+
+document.getElementById("resetBtn").addEventListener("click", reset);
+document.getElementById("backBtn").addEventListener("click", backStep);
+document.getElementById("nextBtn").addEventListener("click", nextStep);
+document.getElementById("nextChangeBtn").addEventListener("click", jumpToGridChange);
+document.getElementById("solutionBtn").addEventListener("click", jumpToSolution);
+document.getElementById("autoBtn").addEventListener("click", autoPlay);
+document.getElementById("stopBtn").addEventListener("click", stopAuto);
+document.getElementById("nSelect").addEventListener("change", reset);
+document.addEventListener("keydown", (e) => {
+    if (e.key === " " || e.key === "ArrowRight") {
+        e.preventDefault();
+        nextStep();
+    }
+    if (e.key === "ArrowLeft") {
+        e.preventDefault();
+        backStep();
+    }
+});
+
+renderCode();
+reset();
+</script>
+</body>
+</html>
