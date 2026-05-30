@@ -1,0 +1,1393 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Backtracking Visualizer Suite</title>
+    <style>
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        font-family: Arial, Helvetica, sans-serif;
+        background: #f8fafc;
+        color: #0f172a;
+      }
+      .page {
+        max-width: 1500px;
+        margin: 0 auto;
+        padding: 12px;
+      }
+      .topbar {
+        position: sticky;
+        top: 0;
+        z-index: 10;
+        background: rgba(255, 255, 255, 0.96);
+        border: 1px solid #e2e8f0;
+        border-radius: 16px;
+        padding: 12px;
+        box-shadow: 0 4px 14px rgba(15, 23, 42, 0.08);
+        backdrop-filter: blur(8px);
+      }
+      .toprow {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        flex-wrap: wrap;
+      }
+      h1 {
+        margin: 0;
+        font-size: 22px;
+      }
+      .subtext {
+        margin: 4px 0 0;
+        font-size: 13px;
+        color: #64748b;
+      }
+      .tabs,
+      .controls {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        align-items: center;
+      }
+      button {
+        border: 1px solid #cbd5e1;
+        background: #fff;
+        color: #0f172a;
+        padding: 8px 11px;
+        border-radius: 10px;
+        cursor: pointer;
+        font-weight: 700;
+        font-size: 13px;
+      }
+      button:hover {
+        background: #f1f5f9;
+      }
+      button:disabled {
+        opacity: 0.45;
+        cursor: not-allowed;
+      }
+      button.primary {
+        background: #0f172a;
+        color: #fff;
+        border-color: #0f172a;
+      }
+      button.primary:hover {
+        background: #1e293b;
+      }
+      button.active {
+        background: #dbeafe;
+        border-color: #93c5fd;
+        color: #1e3a8a;
+      }
+      .progress-wrap {
+        margin-top: 10px;
+        height: 8px;
+        border-radius: 99px;
+        background: #e2e8f0;
+        overflow: hidden;
+      }
+      .progress {
+        height: 100%;
+        width: 0;
+        background: #0f172a;
+        transition: width 0.2s ease;
+      }
+      .layout {
+        display: grid;
+        grid-template-columns: 0.95fr 1.1fr 1.45fr;
+        gap: 12px;
+        margin-top: 12px;
+      }
+      .card {
+        background: #fff;
+        border: 1px solid #e2e8f0;
+        border-radius: 16px;
+        padding: 12px;
+        box-shadow: 0 2px 10px rgba(15, 23, 42, 0.04);
+      }
+      .card h2,
+      .card h3 {
+        margin: 0 0 8px;
+      }
+      .card h2 {
+        font-size: 18px;
+      }
+      .card h3 {
+        font-size: 15px;
+      }
+      .description {
+        margin: 0;
+        color: #475569;
+        font-size: 13px;
+        line-height: 1.45;
+      }
+      .status-pill {
+        display: inline-block;
+        margin-top: 10px;
+        padding: 5px 9px;
+        border-radius: 999px;
+        font-size: 12px;
+        font-weight: 800;
+        background: #f1f5f9;
+        color: #334155;
+      }
+      .status-success {
+        background: #dcfce7;
+        color: #166534;
+      }
+      .status-fail {
+        background: #fee2e2;
+        color: #991b1b;
+      }
+      .status-backtrack {
+        background: #fef3c7;
+        color: #92400e;
+      }
+      .status-mark {
+        background: #dbeafe;
+        color: #1e40af;
+      }
+      .stack-list {
+        max-height: 145px;
+        overflow: auto;
+        display: flex;
+        flex-direction: column-reverse;
+        gap: 5px;
+      }
+      .stack-item {
+        border: 1px solid #e2e8f0;
+        border-radius: 10px;
+        padding: 7px 8px;
+        font-family: Consolas, Monaco, monospace;
+        font-size: 12px;
+        background: #f8fafc;
+      }
+      .grid-pair {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+      }
+      .matrix {
+        display: grid;
+        gap: 4px;
+        width: fit-content;
+      }
+      .cell {
+        width: 36px;
+        height: 36px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border: 1px solid #cbd5e1;
+        border-radius: 9px;
+        font-weight: 800;
+        font-size: 14px;
+        background: #fff;
+        position: relative;
+      }
+      .cell.blocked {
+        background: #e2e8f0;
+        color: #64748b;
+      }
+      .cell.current {
+        outline: 3px solid #93c5fd;
+        background: #eff6ff;
+        transform: scale(1.04);
+      }
+      .cell.path {
+        outline: 3px solid #86efac;
+        background: #f0fdf4;
+      }
+      .cell.trying {
+        outline: 3px solid #fcd34d;
+        background: #fffbeb;
+      }
+      .cell.bad {
+        outline: 3px solid #fca5a5;
+        background: #fef2f2;
+      }
+      .cell.fixed {
+        background: #e0f2fe;
+        color: #075985;
+      }
+      .cell.queen {
+        background: #f0fdf4;
+        color: #166534;
+        outline: 3px solid #86efac;
+      }
+      .cell.attack {
+        background: #fef2f2;
+        color: #991b1b;
+      }
+      pre.code {
+        margin: 0;
+        max-height: calc(100vh - 240px);
+        overflow: auto;
+        background: #020617;
+        color: #e2e8f0;
+        padding: 10px;
+        border-radius: 12px;
+        font-family: Consolas, Monaco, monospace;
+        font-size: 11px;
+        line-height: 1.42;
+      }
+      .code-line {
+        display: flex;
+        border-radius: 6px;
+        padding: 1px 4px;
+        white-space: pre;
+      }
+      .code-line.active {
+        background: #334155;
+      }
+      .line-no {
+        width: 28px;
+        flex: 0 0 28px;
+        color: #64748b;
+        text-align: right;
+        margin-right: 10px;
+        user-select: none;
+      }
+      .legend {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px 12px;
+        margin-top: 10px;
+        color: #64748b;
+        font-size: 12px;
+      }
+      .legend span.box {
+        display: inline-block;
+        width: 12px;
+        height: 12px;
+        border: 1px solid #cbd5e1;
+        border-radius: 4px;
+        margin-right: 5px;
+        vertical-align: -2px;
+      }
+      .tiny-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+        margin-top: 10px;
+      }
+      .note {
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 12px;
+        padding: 9px;
+        font-size: 12px;
+        line-height: 1.4;
+        color: #475569;
+      }
+      @media (max-width: 1100px) {
+        .layout {
+          grid-template-columns: 1fr;
+        }
+        pre.code {
+          max-height: 360px;
+        }
+      }
+      @media (max-width: 700px) {
+        .grid-pair,
+        .tiny-grid {
+          grid-template-columns: 1fr;
+        }
+        .cell {
+          width: 31px;
+          height: 31px;
+          font-size: 13px;
+        }
+        h1 {
+          font-size: 18px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="page">
+      <div class="topbar">
+        <div class="toprow">
+          <div>
+            <h1>Backtracking Visualizer Suite</h1>
+            <p class="subtext">
+              Maze, N-Queens, and Sudoku. One standalone HTML file.
+            </p>
+          </div>
+          <div class="tabs">
+            <button id="tab-maze" class="active" onclick="setProblem('maze')">
+              Maze
+            </button>
+            <button id="tab-queens" onclick="setProblem('queens')">
+              N-Queens
+            </button>
+            <button id="tab-sudoku" onclick="setProblem('sudoku')">
+              Sudoku
+            </button>
+          </div>
+          <div class="controls">
+            <button onclick="resetTrace()">Reset</button>
+            <button id="backBtn" onclick="prevStep()">Back</button>
+            <button id="playBtn" class="primary" onclick="togglePlay()">
+              Play
+            </button>
+            <button id="stopBtn" onclick="stopPlay()">Stop</button>
+            <button id="nextBtn" onclick="nextStep()">Next</button>
+          </div>
+        </div>
+        <div class="progress-wrap">
+          <div id="progress" class="progress"></div>
+        </div>
+      </div>
+
+      <div class="layout">
+        <div>
+          <div class="card">
+            <h2 id="stepTitle"></h2>
+            <p id="stepDetail" class="description"></p>
+            <div id="statusPill" class="status-pill"></div>
+          </div>
+          <div class="card" style="margin-top: 12px">
+            <h3>Call stack</h3>
+            <div id="stackList" class="stack-list"></div>
+          </div>
+          <div class="card" style="margin-top: 12px">
+            <h3>Backtracking idea</h3>
+            <p id="problemNote" class="description"></p>
+          </div>
+        </div>
+
+        <div>
+          <div id="visualArea" class="grid-pair"></div>
+          <div class="card" style="margin-top: 12px">
+            <h3>What the current function is asking</h3>
+            <p id="questionText" class="description"></p>
+            <div id="extraPanel" class="tiny-grid"></div>
+          </div>
+        </div>
+
+        <div>
+          <div class="card">
+            <h3>Code trace</h3>
+            <pre id="codeBlock" class="code"></pre>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      const PROBLEMS = {};
+      let currentProblem = "maze";
+      let steps = [];
+      let stepIndex = 0;
+      let timer = null;
+
+      function cloneGrid(grid) {
+        return grid.map((row) => row.slice());
+      }
+      function makeBlank(rows, cols, value = 0) {
+        return Array.from({ length: rows }, () => Array(cols).fill(value));
+      }
+      function deepCopy(obj) {
+        return JSON.parse(JSON.stringify(obj));
+      }
+      function addStep(list, step, state) {
+        list.push({
+          title: step.title,
+          detail: step.detail,
+          kind: step.kind || "check",
+          lines: step.lines || [],
+          current: step.current || null,
+          trying: step.trying || null,
+          bad: step.bad || null,
+          result: step.result ?? null,
+          state: deepCopy(state),
+        });
+      }
+      function sameCell(a, b) {
+        return a && b && a[0] === b[0] && a[1] === b[1];
+      }
+
+      PROBLEMS.maze = {
+        name: "Maze",
+        note: "Maze backtracking marks a cell as part of the path, tries down, tries right, and if both fail, unmarks the cell. That unmark is the actual backtrack.",
+        question:
+          "solveMazeUtil(x, y) asks: starting from this cell, can I reach the bottom-right destination using only down and right moves?",
+        code: [
+          "boolean solveMazeUtil(int maze[][], int x, int y, int sol[][]) {",
+          "    if (x == N - 1 && y == N - 1) {",
+          "        sol[x][y] = 1;",
+          "        return true;",
+          "    }",
+          "    if (isSafe(maze, x, y) == true) {",
+          "        if (sol[x][y] == 1)",
+          "            return false;",
+          "        sol[x][y] = 1;",
+          "        if (solveMazeUtil(maze, x + 1, y, sol) == true)",
+          "            return true;",
+          "        if (solveMazeUtil(maze, x, y + 1, sol) == true)",
+          "            return true;",
+          "        sol[x][y] = 0;",
+          "        return false;",
+          "    }",
+          "    return false;",
+          "}",
+          "",
+          "boolean isSafe(int maze[][], int x, int y) {",
+          "    if (x >= 0 && x < N && y >= 0 && y < N",
+          "        && maze[x][y] == 1)",
+          "        return true;",
+          "    return false;",
+          "}",
+        ],
+        buildTrace: buildMazeTrace,
+        render: renderMaze,
+      };
+
+      function buildMazeTrace() {
+        const maze = [
+          [1, 0, 0, 1],
+          [1, 1, 0, 0],
+          [0, 1, 1, 1],
+          [1, 1, 0, 1],
+        ];
+        const N = 4,
+          sol = makeBlank(N, N, 0),
+          steps = [],
+          stack = [];
+        const state = { maze, sol, stack };
+        const inBounds = (x, y) => x >= 0 && x < N && y >= 0 && y < N;
+        const isSafe = (x, y) =>
+          inBounds(x, y) && maze[x][y] === 1 && sol[x][y] === 0;
+
+        addStep(
+          steps,
+          {
+            title: "Initial state",
+            detail:
+              "The solution matrix starts empty. 1 means open, 0 means blocked.",
+            kind: "start",
+            current: [0, 0],
+          },
+          state,
+        );
+
+        function solve(x, y) {
+          stack.push(`solveMazeUtil(${x}, ${y})`);
+          addStep(
+            steps,
+            {
+              title: `Call solveMazeUtil(${x}, ${y})`,
+              detail: "A recursive call starts.",
+              current: [x, y],
+              lines: [1],
+            },
+            state,
+          );
+
+          addStep(
+            steps,
+            {
+              title: `Check goal at (${x}, ${y})`,
+              detail: `The goal is (${N - 1}, ${N - 1}).`,
+              current: [x, y],
+              lines: [2],
+            },
+            state,
+          );
+          if (x === N - 1 && y === N - 1) {
+            sol[x][y] = 1;
+            addStep(
+              steps,
+              {
+                title: "Goal reached",
+                detail: "Mark the destination as part of the path.",
+                kind: "success",
+                current: [x, y],
+                lines: [3],
+              },
+              state,
+            );
+            addStep(
+              steps,
+              {
+                title: "Return true",
+                detail:
+                  "The true value travels backward through the call stack.",
+                kind: "success",
+                current: [x, y],
+                lines: [4],
+                result: true,
+              },
+              state,
+            );
+            stack.pop();
+            return true;
+          }
+
+          const safe = isSafe(x, y);
+          addStep(
+            steps,
+            {
+              title: `Check isSafe(${x}, ${y})`,
+              detail: !inBounds(x, y)
+                ? "This cell is outside the board."
+                : maze[x][y] === 0
+                  ? "This cell is blocked."
+                  : sol[x][y] === 1
+                    ? "This cell is already part of the current path."
+                    : "This cell is open and unused.",
+              kind: safe ? "check" : "fail",
+              current: [x, y],
+              bad: safe ? null : [x, y],
+              lines: [6, 20, 21, 22, 23, 24],
+            },
+            state,
+          );
+
+          if (safe) {
+            addStep(
+              steps,
+              {
+                title: "Check already marked",
+                detail: "The current cell is not already in the solution path.",
+                current: [x, y],
+                lines: [7, 8],
+              },
+              state,
+            );
+            sol[x][y] = 1;
+            addStep(
+              steps,
+              {
+                title: `Mark (${x}, ${y})`,
+                detail: "Choose this cell by setting sol[x][y] = 1.",
+                kind: "mark",
+                current: [x, y],
+                lines: [9],
+              },
+              state,
+            );
+
+            addStep(
+              steps,
+              {
+                title: "Try down",
+                detail: `Call solveMazeUtil(${x + 1}, ${y}).`,
+                kind: "try",
+                trying: [x + 1, y],
+                lines: [10],
+              },
+              state,
+            );
+            if (solve(x + 1, y)) {
+              addStep(
+                steps,
+                {
+                  title: "Down returned true",
+                  detail: "The down path solved the maze, so return true.",
+                  kind: "success",
+                  current: [x, y],
+                  lines: [11],
+                  result: true,
+                },
+                state,
+              );
+              stack.pop();
+              return true;
+            }
+
+            addStep(
+              steps,
+              {
+                title: "Try right",
+                detail: `Down failed, so call solveMazeUtil(${x}, ${y + 1}).`,
+                kind: "try",
+                trying: [x, y + 1],
+                lines: [12],
+              },
+              state,
+            );
+            if (solve(x, y + 1)) {
+              addStep(
+                steps,
+                {
+                  title: "Right returned true",
+                  detail: "The right path solved the maze, so return true.",
+                  kind: "success",
+                  current: [x, y],
+                  lines: [13],
+                  result: true,
+                },
+                state,
+              );
+              stack.pop();
+              return true;
+            }
+
+            sol[x][y] = 0;
+            addStep(
+              steps,
+              {
+                title: `Backtrack from (${x}, ${y})`,
+                detail:
+                  "Both choices failed. Undo this cell by setting sol[x][y] = 0.",
+                kind: "backtrack",
+                current: [x, y],
+                lines: [14],
+              },
+              state,
+            );
+            addStep(
+              steps,
+              {
+                title: "Return false",
+                detail: "No path from this cell worked.",
+                kind: "fail",
+                current: [x, y],
+                lines: [15],
+                result: false,
+              },
+              state,
+            );
+            stack.pop();
+            return false;
+          }
+
+          addStep(
+            steps,
+            {
+              title: "Return false",
+              detail: "The cell was not safe.",
+              kind: "fail",
+              current: [x, y],
+              bad: [x, y],
+              lines: [17],
+              result: false,
+            },
+            state,
+          );
+          stack.pop();
+          return false;
+        }
+
+        const solved = solve(0, 0);
+        addStep(
+          steps,
+          {
+            title: solved ? "Maze solved" : "No solution",
+            detail: solved
+              ? "The solution matrix shows the final path."
+              : "Every path failed.",
+            kind: solved ? "success" : "fail",
+            current: [3, 3],
+          },
+          state,
+        );
+        return steps;
+      }
+
+      PROBLEMS.queens = {
+        name: "N-Queens",
+        note: "N-Queens places one queen per row. The displayed isSafe method is split into O(n) blocks: same column above, upper-left diagonal, and upper-right diagonal. A failed row returns false, then the previous row removes its queen and tries the next column.",
+        question:
+          "solveNQUtil(row) asks: can I place valid queens starting at this row, given the queens already placed above it?",
+        code: [
+          "boolean solveNQUtil(int n, int row, int board[][]) {",
+          "    if (row == n)",
+          "        return true;",
+          "    for (int col = 0; col < n; col++) {",
+          "        if (isSafe(board, row, col)) {",
+          "            board[row][col] = 1;",
+          "            if (solveNQUtil(n, row + 1, board))",
+          "                return true;",
+          "            board[row][col] = 0;",
+          "        }",
+          "    }",
+          "    return false;",
+          "}",
+          "",
+          "boolean isSafe(int board[][], int row, int col) {",
+          "    // Check same column above this row",
+          "    for (int i = 0; i < row; i++) {",
+          "        if (board[i][col] == 1)",
+          "            return false;",
+          "    }",
+          "",
+          "    // Check upper-left diagonal",
+          "    for (int i = row - 1, j = col - 1;",
+          "         i >= 0 && j >= 0;",
+          "         i--, j--) {",
+          "        if (board[i][j] == 1)",
+          "            return false;",
+          "    }",
+          "",
+          "    // Check upper-right diagonal",
+          "    for (int i = row - 1, j = col + 1;",
+          "         i >= 0 && j < N;",
+          "         i--, j++) {",
+          "        if (board[i][j] == 1)",
+          "            return false;",
+          "    }",
+          "",
+          "    return true;",
+          "}",
+        ],
+        buildTrace: buildQueenTrace,
+        render: renderQueens,
+      };
+
+      function buildQueenTrace() {
+        const n = 4,
+          board = makeBlank(n, n, 0),
+          steps = [],
+          stack = [];
+        const state = { board, stack, attacks: [] };
+
+        function attackedCells(row, col) {
+          const cells = [];
+          for (let i = 0; i < n; i++)
+            for (let j = 0; j < n; j++)
+              if (
+                i === row ||
+                j === col ||
+                row - col === i - j ||
+                row + col === i + j
+              )
+                cells.push([i, j]);
+          return cells;
+        }
+        function safetyFailure(row, col) {
+          for (let i = 0; i < row; i++)
+            if (board[i][col] === 1)
+              return `same column: queen at (${i}, ${col})`;
+          for (let i = row - 1, j = col - 1; i >= 0 && j >= 0; i--, j--)
+            if (board[i][j] === 1)
+              return `upper-left diagonal: queen at (${i}, ${j})`;
+          for (let i = row - 1, j = col + 1; i >= 0 && j < n; i--, j++)
+            if (board[i][j] === 1)
+              return `upper-right diagonal: queen at (${i}, ${j})`;
+          return null;
+        }
+        function isSafe(row, col) {
+          return safetyFailure(row, col) === null;
+        }
+
+        addStep(
+          steps,
+          {
+            title: "Initial 4-Queens board",
+            detail: "We place exactly one queen per row. Start at row 0.",
+            kind: "start",
+            current: [0, 0],
+          },
+          state,
+        );
+
+        function solve(row) {
+          stack.push(`solveNQUtil(row=${row})`);
+          addStep(
+            steps,
+            {
+              title: `Call solveNQUtil(row=${row})`,
+              detail: "A recursive call starts for this row.",
+              current: row < n ? [row, 0] : null,
+              lines: [1],
+            },
+            state,
+          );
+          addStep(
+            steps,
+            {
+              title: "Check base case",
+              detail:
+                row === n
+                  ? "row == n, so all rows already have queens."
+                  : "Not done yet. Try columns in this row.",
+              kind: row === n ? "success" : "check",
+              current: row < n ? [row, 0] : null,
+              lines: [2, 3],
+            },
+            state,
+          );
+
+          if (row === n) {
+            addStep(
+              steps,
+              {
+                title: "Return true",
+                detail:
+                  "We moved past the last row, so rows 0 through 3 were successfully filled.",
+                kind: "success",
+                lines: [3],
+                result: true,
+              },
+              state,
+            );
+            stack.pop();
+            return true;
+          }
+
+          for (let col = 0; col < n; col++) {
+            state.attacks = attackedCells(row, col);
+            addStep(
+              steps,
+              {
+                title: `Try row ${row}, column ${col}`,
+                detail: `Check if (${row}, ${col}) is safe using O(n) blocks: same column above, upper-left diagonal, then upper-right diagonal.`,
+                kind: "try",
+                current: [row, col],
+                trying: [row, col],
+                lines: [4, 5, 15, 16, 17, 18, 22, 23, 24, 30, 31, 32, 38],
+              },
+              state,
+            );
+
+            const failedBecause = safetyFailure(row, col);
+            if (failedBecause === null) {
+              board[row][col] = 1;
+              addStep(
+                steps,
+                {
+                  title: `Place queen at (${row}, ${col})`,
+                  detail: "This square is safe, so set board[row][col] = 1.",
+                  kind: "mark",
+                  current: [row, col],
+                  lines: [6],
+                },
+                state,
+              );
+
+              addStep(
+                steps,
+                {
+                  title: "Recurse to next row",
+                  detail: `Call solveNQUtil(row=${row + 1}).`,
+                  kind: "try",
+                  current: row + 1 < n ? [row + 1, 0] : null,
+                  lines: [7],
+                },
+                state,
+              );
+              if (solve(row + 1)) {
+                addStep(
+                  steps,
+                  {
+                    title: `Row ${row} choice worked`,
+                    detail:
+                      "The next row eventually returned true, so this queen stays.",
+                    kind: "success",
+                    current: [row, col],
+                    lines: [8],
+                    result: true,
+                  },
+                  state,
+                );
+                stack.pop();
+                return true;
+              }
+
+              board[row][col] = 0;
+              addStep(
+                steps,
+                {
+                  title: `Backtrack: remove queen from (${row}, ${col})`,
+                  detail:
+                    "That queen led to a dead end later, so undo it and try the next column.",
+                  kind: "backtrack",
+                  current: [row, col],
+                  lines: [9],
+                },
+                state,
+              );
+            } else {
+              addStep(
+                steps,
+                {
+                  title: `Column ${col} is not safe`,
+                  detail: `Blocked by ${failedBecause}.`,
+                  kind: "fail",
+                  current: [row, col],
+                  bad: [row, col],
+                  lines: [5, 17, 18, 23, 26, 31, 34],
+                },
+                state,
+              );
+            }
+          }
+
+          addStep(
+            steps,
+            {
+              title: `No valid column in row ${row}`,
+              detail:
+                "Every column failed, so return false to the previous row.",
+              kind: "fail",
+              current: [row, 0],
+              lines: [12],
+              result: false,
+            },
+            state,
+          );
+          stack.pop();
+          return false;
+        }
+
+        const solved = solve(0);
+        state.attacks = [];
+        addStep(
+          steps,
+          {
+            title: solved ? "N-Queens solved" : "No solution",
+            detail: solved
+              ? "The board shows one valid 4-Queens arrangement."
+              : "No arrangement was found.",
+            kind: solved ? "success" : "fail",
+          },
+          state,
+        );
+        return steps;
+      }
+
+      PROBLEMS.sudoku = {
+        name: "Sudoku",
+        note: "Sudoku finds an empty cell, tries numbers 1-9, recurses, and erases the number if that path fails. This demo puzzle is almost solved so the trace stays small, but it still includes a real backtrack.",
+        question:
+          "solveSudoku(board) asks: can I fill all remaining empty cells while obeying row, column, and 3x3 box rules?",
+        code: [
+          "boolean solveSudoku(int board[][]) {",
+          "    for (int row = 0; row < 9; row++) {",
+          "        for (int col = 0; col < 9; col++) {",
+          "            if (board[row][col] == 0) {",
+          "                for (int num = 1; num <= 9; num++) {",
+          "                    if (isSafe(board, row, col, num)) {",
+          "                        board[row][col] = num;",
+          "                        if (solveSudoku(board))",
+          "                            return true;",
+          "                        board[row][col] = 0;",
+          "                    }",
+          "                }",
+          "                return false;",
+          "            }",
+          "        }",
+          "    }",
+          "    return true;",
+          "}",
+          "",
+          "boolean isSafe(int board[][], int row, int col, int num) {",
+          "    for (int x = 0; x < 9; x++) {",
+          "        if (board[row][x] == num)",
+          "            return false;",
+          "        if (board[x][col] == num)",
+          "            return false;",
+          "    }",
+          "    int startRow = row - row % 3;",
+          "    int startCol = col - col % 3;",
+          "    for (int i = 0; i < 3; i++)",
+          "        for (int j = 0; j < 3; j++)",
+          "            if (board[i + startRow][j + startCol] == num)",
+          "                return false;",
+          "    return true;",
+          "}",
+        ],
+        buildTrace: buildSudokuTrace,
+        render: renderSudoku,
+      };
+
+      function buildSudokuTrace() {
+        const original = [
+          [0, 3, 4, 6, 7, 8, 9, 1, 2],
+          [6, 7, 2, 1, 9, 5, 3, 4, 8],
+          [1, 0, 8, 3, 4, 0, 5, 6, 7],
+          [8, 5, 9, 7, 6, 1, 4, 2, 3],
+          [0, 0, 6, 8, 5, 3, 7, 9, 1],
+          [7, 1, 3, 0, 2, 4, 8, 0, 6],
+          [9, 6, 1, 5, 3, 7, 2, 8, 4],
+          [0, 8, 7, 0, 0, 9, 6, 3, 5],
+          [3, 4, 5, 2, 8, 6, 1, 7, 9],
+        ];
+        const board = cloneGrid(original);
+        const fixed = original.map((row) => row.map((v) => v !== 0));
+        const steps = [],
+          stack = [];
+        const state = { board, fixed, stack, row: null, col: null, num: null };
+
+        function isSafe(row, col, num) {
+          for (let x = 0; x < 9; x++) {
+            if (board[row][x] === num) return false;
+            if (board[x][col] === num) return false;
+          }
+          const sr = row - (row % 3),
+            sc = col - (col % 3);
+          for (let i = 0; i < 3; i++)
+            for (let j = 0; j < 3; j++)
+              if (board[i + sr][j + sc] === num) return false;
+          return true;
+        }
+
+        addStep(
+          steps,
+          {
+            title: "Initial Sudoku board",
+            detail: "Zeros are empty cells. Blue cells are fixed clues.",
+            kind: "start",
+            current: [0, 0],
+          },
+          state,
+        );
+
+        function solve() {
+          stack.push("solveSudoku(board)");
+          addStep(
+            steps,
+            {
+              title: "Call solveSudoku(board)",
+              detail: "Start scanning for the next empty cell.",
+              lines: [1],
+            },
+            state,
+          );
+
+          for (let row = 0; row < 9; row++) {
+            for (let col = 0; col < 9; col++) {
+              if (board[row][col] === 0) {
+                state.row = row;
+                state.col = col;
+                addStep(
+                  steps,
+                  {
+                    title: `Found empty cell (${row}, ${col})`,
+                    detail: "Try numbers 1 through 9 in this cell.",
+                    current: [row, col],
+                    lines: [2, 3, 4],
+                  },
+                  state,
+                );
+
+                for (let num = 1; num <= 9; num++) {
+                  state.num = num;
+                  const ok = isSafe(row, col, num);
+                  addStep(
+                    steps,
+                    {
+                      title: `Try ${num} at (${row}, ${col})`,
+                      detail: ok
+                        ? `${num} is safe here, so place it.`
+                        : `${num} breaks a row, column, or box rule.`,
+                      kind: ok ? "try" : "fail",
+                      current: [row, col],
+                      trying: [row, col],
+                      bad: ok ? null : [row, col],
+                      lines: [
+                        5, 6, 20, 21, 22, 23, 24, 26, 27, 28, 29, 30, 31, 32,
+                        33,
+                      ],
+                    },
+                    state,
+                  );
+
+                  if (ok) {
+                    board[row][col] = num;
+                    addStep(
+                      steps,
+                      {
+                        title: `Place ${num} at (${row}, ${col})`,
+                        detail: "Choose this number and recurse.",
+                        kind: "mark",
+                        current: [row, col],
+                        lines: [7],
+                      },
+                      state,
+                    );
+
+                    addStep(
+                      steps,
+                      {
+                        title: "Recurse after placement",
+                        detail: "Now solve the rest of the board.",
+                        kind: "try",
+                        current: [row, col],
+                        lines: [8],
+                      },
+                      state,
+                    );
+                    if (solve()) {
+                      addStep(
+                        steps,
+                        {
+                          title: `Keeping ${num} at (${row}, ${col})`,
+                          detail:
+                            "The recursive call returned true, so this number stays.",
+                          kind: "success",
+                          current: [row, col],
+                          lines: [9],
+                          result: true,
+                        },
+                        state,
+                      );
+                      stack.pop();
+                      return true;
+                    }
+
+                    board[row][col] = 0;
+                    addStep(
+                      steps,
+                      {
+                        title: `Backtrack: erase (${row}, ${col})`,
+                        detail: `The ${num} led to a dead end later, so set board[row][col] back to 0.`,
+                        kind: "backtrack",
+                        current: [row, col],
+                        lines: [10],
+                      },
+                      state,
+                    );
+                  }
+                }
+
+                addStep(
+                  steps,
+                  {
+                    title: `No number works at (${row}, ${col})`,
+                    detail: "All numbers 1-9 failed, so return false.",
+                    kind: "fail",
+                    current: [row, col],
+                    lines: [13],
+                    result: false,
+                  },
+                  state,
+                );
+                stack.pop();
+                return false;
+              }
+            }
+          }
+
+          addStep(
+            steps,
+            {
+              title: "Sudoku solved",
+              detail: "No empty cells remain, so return true.",
+              kind: "success",
+              lines: [17],
+              result: true,
+            },
+            state,
+          );
+          stack.pop();
+          return true;
+        }
+
+        const solved = solve();
+        addStep(
+          steps,
+          {
+            title: solved ? "Sudoku solved" : "No solution",
+            detail: solved
+              ? "The board is completely filled."
+              : "The solver could not fill the board.",
+            kind: solved ? "success" : "fail",
+          },
+          state,
+        );
+        return steps;
+      }
+
+      function renderMatrix(title, grid, opts = {}) {
+        const rows = grid.length,
+          cols = grid[0].length;
+        let html = `<div class="card"><h3>${title}</h3><div class="matrix" style="grid-template-columns:repeat(${cols}, 36px)">`;
+        for (let r = 0; r < rows; r++) {
+          for (let c = 0; c < cols; c++) {
+            const v = grid[r][c];
+            const classes = ["cell"];
+            if (opts.blocked && opts.blocked(r, c, v)) classes.push("blocked");
+            if (opts.path && opts.path(r, c, v)) classes.push("path");
+            if (opts.fixed && opts.fixed(r, c, v)) classes.push("fixed");
+            if (opts.queen && opts.queen(r, c, v)) classes.push("queen");
+            if (opts.attack && opts.attack(r, c, v)) classes.push("attack");
+            if (opts.current && sameCell(opts.current, [r, c]))
+              classes.push("current");
+            if (opts.trying && sameCell(opts.trying, [r, c]))
+              classes.push("trying");
+            if (opts.bad && sameCell(opts.bad, [r, c])) classes.push("bad");
+            const display = opts.display ? opts.display(r, c, v) : v;
+            html += `<div class="${classes.join(" ")}" title="(${r}, ${c})">${display}</div>`;
+          }
+        }
+        html += `</div></div>`;
+        return html;
+      }
+
+      function renderMaze(step) {
+        const s = step.state;
+        document.getElementById("visualArea").innerHTML =
+          renderMatrix("Maze matrix", s.maze, {
+            current: step.current,
+            trying: step.trying,
+            bad: step.bad,
+            blocked: (r, c, v) => v === 0,
+          }) +
+          renderMatrix("Solution matrix", s.sol, {
+            current: step.current,
+            trying: step.trying,
+            bad: step.bad,
+            path: (r, c, v) => v === 1,
+          });
+        document.getElementById("extraPanel").innerHTML =
+          `<div class="note"><b>Move order:</b><br>1. Down: solveMazeUtil(x + 1, y)<br>2. Right: solveMazeUtil(x, y + 1)</div>
+     <div class="note"><b>isSafe checks:</b><br>inside board and maze[x][y] == 1</div>`;
+      }
+
+      function renderQueens(step) {
+        const s = step.state;
+        const attackSet = new Set(
+          (s.attacks || []).map((cell) => cell.join(",")),
+        );
+        document.getElementById("visualArea").innerHTML = renderMatrix(
+          "4-Queens board",
+          s.board,
+          {
+            current: step.current,
+            trying: step.trying,
+            bad: step.bad,
+            queen: (r, c, v) => v === 1,
+            attack: (r, c, v) => attackSet.has(`${r},${c}`) && v !== 1,
+          },
+        );
+        document.getElementById("extraPanel").innerHTML =
+          `<div class="note"><b>isSafe is O(n):</b><br>Because we place one queen per row, we only check the same column above and the two upper diagonals. No nested full-board scan.</div>
+     <div class="note"><b>Base case:</b><br>row == n means we already placed queens in all rows.</div>`;
+      }
+
+      function renderSudoku(step) {
+        const s = step.state;
+        document.getElementById("visualArea").innerHTML = renderMatrix(
+          "Sudoku board",
+          s.board,
+          {
+            current: step.current,
+            trying: step.trying,
+            bad: step.bad,
+            fixed: (r, c, v) => s.fixed[r][c],
+            path: (r, c, v) => v !== 0 && !s.fixed[r][c],
+            display: (r, c, v) => (v === 0 ? "" : v),
+          },
+        );
+        document.getElementById("extraPanel").innerHTML =
+          `<div class="note"><b>Current number:</b><br>${s.num ? "Trying " + s.num : "None yet"}</div>
+     <div class="note"><b>isSafe checks:</b><br>row, column, and 3x3 box.</div>`;
+      }
+
+      function renderCode(code, activeLines) {
+        const active = new Set(activeLines || []);
+        return code
+          .map((line, i) => {
+            const n = i + 1;
+            return `<div class="code-line ${active.has(n) ? "active" : ""}"><span class="line-no">${n}</span><span>${escapeHtml(line)}</span></div>`;
+          })
+          .join("");
+      }
+      function escapeHtml(text) {
+        return text
+          .replaceAll("&", "&amp;")
+          .replaceAll("<", "&lt;")
+          .replaceAll(">", "&gt;");
+      }
+
+      function setProblem(name) {
+        stopPlay();
+        currentProblem = name;
+        document
+          .querySelectorAll(".tabs button")
+          .forEach((b) => b.classList.remove("active"));
+        document.getElementById("tab-" + name).classList.add("active");
+        steps = PROBLEMS[name].buildTrace();
+        stepIndex = 0;
+        render();
+      }
+
+      function resetTrace() {
+        stopPlay();
+        stepIndex = 0;
+        render();
+      }
+      function prevStep() {
+        stopPlay();
+        if (stepIndex > 0) stepIndex--;
+        render();
+      }
+      function nextStep() {
+        if (stepIndex < steps.length - 1) stepIndex++;
+        else stopPlay();
+        render();
+      }
+      function togglePlay() {
+        if (timer) {
+          stopPlay();
+          return;
+        }
+        document.getElementById("playBtn").textContent = "Pause";
+        timer = setInterval(
+          () => {
+            if (stepIndex >= steps.length - 1) {
+              stopPlay();
+              return;
+            }
+            stepIndex++;
+            render();
+          },
+          currentProblem === "sudoku" ? 450 : 750,
+        );
+      }
+      function stopPlay() {
+        if (timer) {
+          clearInterval(timer);
+          timer = null;
+        }
+        document.getElementById("playBtn").textContent = "Play";
+      }
+
+      function render() {
+        const problem = PROBLEMS[currentProblem];
+        const step = steps[stepIndex];
+        document.getElementById("stepTitle").textContent = step.title;
+        document.getElementById("stepDetail").textContent = step.detail;
+        const pill = document.getElementById("statusPill");
+        pill.className = "status-pill";
+        if (step.kind === "success") pill.classList.add("status-success");
+        if (step.kind === "fail") pill.classList.add("status-fail");
+        if (step.kind === "backtrack") pill.classList.add("status-backtrack");
+        if (step.kind === "mark") pill.classList.add("status-mark");
+        pill.textContent = `${step.kind}${step.result === true ? " | returns true" : step.result === false ? " | returns false" : ""}`;
+
+        document.getElementById("problemNote").textContent = problem.note;
+        document.getElementById("questionText").textContent = problem.question;
+        document.getElementById("codeBlock").innerHTML = renderCode(
+          problem.code,
+          step.lines,
+        );
+
+        const stack = step.state.stack || [];
+        document.getElementById("stackList").innerHTML = stack.length
+          ? stack
+              .map((x) => `<div class="stack-item">${escapeHtml(x)}</div>`)
+              .join("")
+          : `<p class="description">No active calls yet.</p>`;
+
+        problem.render(step);
+
+        document.getElementById("progress").style.width =
+          `${((stepIndex + 1) / steps.length) * 100}%`;
+        document.getElementById("backBtn").disabled = stepIndex === 0;
+        document.getElementById("nextBtn").disabled =
+          stepIndex === steps.length - 1;
+      }
+
+      setProblem("maze");
+    </script>
+  </body>
+</html>

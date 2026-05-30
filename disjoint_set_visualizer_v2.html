@@ -1,0 +1,1619 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Disjoint Set Visualizer</title>
+    <style>
+      :root {
+        --bg: #f8fafc;
+        --card: #ffffff;
+        --border: #dbe3ef;
+        --text: #0f172a;
+        --muted: #64748b;
+        --blue: #2563eb;
+        --blue-soft: #dbeafe;
+        --orange: #ea580c;
+        --orange-soft: #fed7aa;
+        --green: #15803d;
+        --green-soft: #dcfce7;
+        --yellow: #fde047;
+        --slate-950: #020617;
+        --shadow: 0 10px 25px rgba(15, 23, 42, 0.08);
+        --radius: 18px;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        font-family:
+          Inter,
+          ui-sans-serif,
+          system-ui,
+          -apple-system,
+          BlinkMacSystemFont,
+          "Segoe UI",
+          sans-serif;
+        background: var(--bg);
+        color: var(--text);
+      }
+
+      .page {
+        max-width: 1500px;
+        margin: 0 auto;
+        padding: 18px;
+      }
+
+      .header {
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 28px;
+        padding: 18px;
+        box-shadow: var(--shadow);
+        display: flex;
+        justify-content: space-between;
+        gap: 16px;
+        align-items: center;
+        flex-wrap: wrap;
+        margin-bottom: 16px;
+      }
+
+      .header h1 {
+        margin: 0;
+        font-size: 28px;
+        letter-spacing: -0.03em;
+      }
+
+      .header p {
+        margin: 5px 0 0;
+        color: var(--muted);
+        font-size: 14px;
+      }
+
+      .header-actions,
+      .command-row,
+      .step-controls {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+      }
+
+      input[type="number"],
+      input[type="text"] {
+        width: 82px;
+        padding: 10px 11px;
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        background: #fff;
+        color: var(--text);
+        font-size: 15px;
+        outline: none;
+      }
+
+      input[type="number"]:focus,
+      input[type="text"]:focus {
+        border-color: var(--blue);
+        box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+      }
+
+      button {
+        border: 1px solid var(--border);
+        background: #fff;
+        color: var(--text);
+        padding: 10px 13px;
+        border-radius: 12px;
+        font-weight: 700;
+        cursor: pointer;
+        transition:
+          transform 0.1s ease,
+          background 0.1s ease,
+          border-color 0.1s ease;
+      }
+
+      button:hover:not(:disabled) {
+        transform: translateY(-1px);
+        border-color: #b6c2d6;
+        background: #f8fafc;
+      }
+
+      button.primary {
+        background: var(--blue);
+        color: white;
+        border-color: var(--blue);
+      }
+
+      button.primary:hover:not(:disabled) {
+        background: #1d4ed8;
+      }
+
+      button:disabled {
+        opacity: 0.45;
+        cursor: not-allowed;
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: minmax(0, 1.2fr) minmax(390px, 0.8fr);
+        gap: 16px;
+        align-items: start;
+      }
+
+      .card {
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 24px;
+        padding: 16px;
+        box-shadow: var(--shadow);
+        margin-bottom: 16px;
+      }
+
+      .card h2 {
+        margin: 0 0 4px;
+        font-size: 18px;
+        letter-spacing: -0.02em;
+      }
+
+      .card p {
+        color: var(--muted);
+        margin: 0;
+        font-size: 14px;
+        line-height: 1.45;
+      }
+
+      .subhead {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 12px;
+        flex-wrap: wrap;
+        margin-bottom: 12px;
+      }
+
+      .pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        border-radius: 999px;
+        padding: 6px 10px;
+        font-size: 12px;
+        font-weight: 800;
+        border: 1px solid var(--border);
+        background: #fff;
+        color: var(--text);
+      }
+
+      .pill.blue {
+        background: var(--blue-soft);
+        color: #1e40af;
+        border-color: #bfdbfe;
+      }
+      .pill.orange {
+        background: var(--orange-soft);
+        color: #9a3412;
+        border-color: #fdba74;
+      }
+      .pill.green {
+        background: var(--green-soft);
+        color: #166534;
+        border-color: #86efac;
+      }
+
+      .forest-wrap,
+      .table-wrap {
+        width: 100%;
+        overflow: auto;
+        border: 1px solid var(--border);
+        border-radius: 18px;
+        background: #fff;
+      }
+
+      .forest-wrap {
+        padding: 10px;
+        min-height: 330px;
+      }
+
+      svg {
+        display: block;
+      }
+
+      .node circle {
+        transition: all 0.18s ease;
+      }
+
+      .node text {
+        pointer-events: none;
+        font-weight: 900;
+        fill: #0f172a;
+      }
+
+      .root-label {
+        font-size: 12px;
+        font-weight: 900;
+        fill: #475569;
+      }
+
+      table {
+        border-collapse: collapse;
+        width: 100%;
+        min-width: 620px;
+        font-size: 14px;
+      }
+
+      th,
+      td {
+        border: 1px solid var(--border);
+        padding: 9px;
+        text-align: center;
+      }
+
+      th {
+        background: #f1f5f9;
+      }
+
+      td.row-label {
+        background: #f8fafc;
+        text-align: left;
+        font-weight: 900;
+        white-space: nowrap;
+      }
+
+      .cell-active {
+        background: var(--blue-soft);
+      }
+      .cell-changed {
+        background: var(--orange-soft);
+        color: #9a3412;
+        font-weight: 900;
+      }
+
+      .sets {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-top: 12px;
+      }
+
+      .command-box {
+        background: #f8fafc;
+        border: 1px solid var(--border);
+        border-radius: 18px;
+        padding: 12px;
+        margin-top: 10px;
+      }
+
+      .command-title {
+        font-weight: 900;
+        margin-right: 6px;
+      }
+
+      .checkbox-row {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-top: 10px;
+        color: var(--muted);
+        font-size: 13px;
+      }
+
+      .summary-box {
+        border-radius: 18px;
+        padding: 14px;
+        background: #fffbeb;
+        border: 1px solid #fde68a;
+        margin-top: 12px;
+      }
+
+      .summary-box.error {
+        background: #fef2f2;
+        border-color: #fecaca;
+      }
+
+      .summary-box h3 {
+        margin: 0 0 6px;
+        font-size: 16px;
+      }
+
+      .summary-box p {
+        margin: 6px 0 0;
+        color: #334155;
+      }
+
+      .code-panel {
+        background: var(--slate-950);
+        color: #e2e8f0;
+        border-radius: 20px;
+        border: 1px solid #172033;
+        padding: 12px;
+        overflow: auto;
+        height: 620px;
+        box-shadow: var(--shadow);
+      }
+
+      .code-title {
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        align-items: center;
+        color: #fff;
+        font-weight: 900;
+        margin-bottom: 8px;
+      }
+
+      .code-line {
+        display: flex;
+        gap: 12px;
+        line-height: 1.55;
+        white-space: pre;
+        border-radius: 8px;
+        padding: 0 8px;
+        font-family:
+          ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+          "Liberation Mono", monospace;
+        font-size: 13px;
+      }
+
+      .code-line .line-no {
+        width: 28px;
+        color: #64748b;
+        text-align: right;
+        flex: 0 0 28px;
+        user-select: none;
+      }
+
+      .code-line.active {
+        background: var(--yellow);
+        color: #111827;
+      }
+
+      .code-line.blank {
+        height: 10px;
+      }
+
+      .history {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+
+      .small-note {
+        margin-top: 8px !important;
+        font-size: 12px !important;
+      }
+
+      .footer {
+        text-align: center;
+        color: var(--muted);
+        margin: 22px 0 8px;
+        font-size: 12px;
+      }
+
+      @media (max-width: 1050px) {
+        .grid {
+          grid-template-columns: 1fr;
+        }
+
+        .code-panel {
+          height: 520px;
+        }
+      }
+
+      @media (max-width: 650px) {
+        .page {
+          padding: 10px;
+        }
+
+        .header h1 {
+          font-size: 23px;
+        }
+
+        input[type="number"],
+        input[type="text"] {
+          width: 72px;
+        }
+
+        .forest-wrap {
+          min-height: 260px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="page">
+      <section class="header">
+        <div>
+          <h1>Disjoint Set Visualizer</h1>
+          <p>
+            MakeSet, Find, Union by height/rank, parent arrays, tree forests,
+            and step-by-step Java code highlighting.
+          </p>
+        </div>
+        <div class="header-actions">
+          <label for="nInput" class="command-title">n</label>
+          <input id="nInput" type="number" min="1" max="18" value="5" />
+          <button id="makeBtn" class="primary">MakeSet(n)</button>
+          <button id="exampleBtn">Load slide example</button>
+        </div>
+      </section>
+
+      <section class="grid">
+        <div>
+          <section class="card">
+            <div class="subhead">
+              <div>
+                <h2>Forest / tree representation</h2>
+                <p>
+                  Each node points upward to its parent. A root points to itself
+                  and displays its height.
+                </p>
+              </div>
+              <div>
+                <span class="pill blue">active</span>
+                <span class="pill orange">changed</span>
+              </div>
+            </div>
+            <div class="forest-wrap">
+              <svg id="forestSvg" width="900" height="340"></svg>
+            </div>
+          </section>
+
+          <section class="card">
+            <div class="subhead">
+              <div>
+                <h2>Array representation</h2>
+                <p>
+                  The same structure is stored as
+                  <strong>parent[index]</strong> and
+                  <strong>height[index]</strong>.
+                </p>
+              </div>
+            </div>
+            <div id="arrayTable" class="table-wrap"></div>
+            <h2 style="margin-top: 14px">Current sets</h2>
+            <div id="setsSummary" class="sets"></div>
+          </section>
+        </div>
+
+        <div>
+          <section class="card">
+            <h2>Commands</h2>
+            <p>
+              Run a command, then use the step controls to walk through what
+              happened.
+            </p>
+
+            <div class="command-box">
+              <div class="command-row">
+                <span class="command-title">Find</span>
+                <input id="findInput" type="number" value="4" />
+                <button id="findBtn" class="primary">Run find</button>
+              </div>
+              <label class="checkbox-row">
+                <input id="pathCompressionToggle" type="checkbox" />
+                Use path compression during find
+              </label>
+            </div>
+
+            <div class="command-box">
+              <div class="command-row">
+                <span class="command-title">Union</span>
+                <input id="unionA" type="number" value="1" />
+                <input id="unionB" type="number" value="3" />
+                <button id="unionBtn" class="primary">Run union</button>
+              </div>
+              <p class="small-note">
+                Tie rule: when heights are equal, this app chooses the
+                left/root1 side, matching the Java version where tree 2 attaches
+                under tree 1.
+              </p>
+            </div>
+          </section>
+
+          <section class="card">
+            <div class="subhead">
+              <div>
+                <h2>Step controls</h2>
+                <p id="stepCount">Step 1 of 1</p>
+              </div>
+              <span id="stepTitle" class="pill green">Ready</span>
+            </div>
+            <div class="step-controls">
+              <button id="firstBtn">First</button>
+              <button id="prevBtn">Previous</button>
+              <button id="nextBtn" class="primary">Next</button>
+              <button id="lastBtn">Last</button>
+            </div>
+
+            <div id="summaryBox" class="summary-box">
+              <h3>What happened?</h3>
+              <p id="summaryMain"></p>
+              <p id="summaryDetail"></p>
+            </div>
+          </section>
+
+          <section class="code-panel">
+            <div class="code-title">
+              <span>Java logic being traced</span>
+              <span class="pill">highlighted line</span>
+            </div>
+            <div id="codeLines"></div>
+          </section>
+
+          <section class="card">
+            <h2>Recent commands</h2>
+            <div id="history" class="history"></div>
+          </section>
+        </div>
+      </section>
+
+      <div class="footer">
+        Single-file HTML app. Students can save this file and open it directly
+        in a browser.
+      </div>
+    </main>
+
+    <script>
+      const CODE_LINES = [
+        { id: "constructor", text: "public DisjointSet(int n) {" },
+        { id: "make-array", text: "    parents = new pair[n];" },
+        { id: "make-loop", text: "    for (int i = 0; i < n; i++)" },
+        { id: "make-init", text: "        parents[i] = new pair(i, 0);" },
+        { id: "constructor-end", text: "}" },
+        { id: "blank1", text: "" },
+        { id: "find-start", text: "public int find(int id) {" },
+        { id: "find-while", text: "    while (id != parents[id].getID())" },
+        { id: "find-move", text: "        id = parents[id].getID();" },
+        { id: "find-return", text: "    return id;" },
+        { id: "find-end", text: "}" },
+        { id: "blank2", text: "" },
+        { id: "union-start", text: "public boolean union(int id1, int id2) {" },
+        { id: "union-find1", text: "    int root1 = find(id1);" },
+        { id: "union-find2", text: "    int root2 = find(id2);" },
+        { id: "union-same", text: "    if (root1 == root2) return false;" },
+        {
+          id: "union-left-taller",
+          text: "    if (height[root1] > height[root2])",
+        },
+        { id: "union-attach-right", text: "        parent[root2] = root1;" },
+        {
+          id: "union-right-taller",
+          text: "    else if (height[root2] > height[root1])",
+        },
+        { id: "union-attach-left", text: "        parent[root1] = root2;" },
+        { id: "union-equal", text: "    else {" },
+        { id: "union-equal-attach", text: "        parent[root2] = root1;" },
+        { id: "union-inc", text: "        height[root1]++;" },
+        { id: "union-close", text: "    }" },
+        { id: "union-return", text: "    return true;" },
+        { id: "union-end", text: "}" },
+      ];
+
+      const PATH_COMPRESSION_CODE_LINES = [
+        { id: "constructor", text: "public DisjointSet(int n) {" },
+        { id: "make-array", text: "    parents = new pair[n];" },
+        { id: "make-loop", text: "    for (int i = 0; i < n; i++)" },
+        { id: "make-init", text: "        parents[i] = new pair(i, 0);" },
+        { id: "constructor-end", text: "}" },
+        { id: "blank1", text: "" },
+        { id: "pc-find-start", text: "public int find(int id) {" },
+        { id: "pc-base-if", text: "    if (id == parents[id].getID())" },
+        { id: "pc-base-return", text: "        return id;" },
+        {
+          id: "pc-recursive",
+          text: "    int res = find(parents[id].getID());",
+        },
+        { id: "pc-if-change", text: "    if (res != parents[id].getID()) {" },
+        { id: "pc-set-parent", text: "        parents[id].setID(res);" },
+        {
+          id: "pc-dec-height",
+          text: "        parents[res].decHeight(); // professor version",
+        },
+        { id: "pc-close-if", text: "    }" },
+        { id: "pc-return-res", text: "    return res;" },
+        { id: "pc-find-end", text: "}" },
+        { id: "blank2", text: "" },
+        { id: "union-start", text: "public boolean union(int id1, int id2) {" },
+        { id: "union-find1", text: "    int root1 = find(id1);" },
+        { id: "union-find2", text: "    int root2 = find(id2);" },
+        { id: "union-same", text: "    if (root1 == root2) return false;" },
+        {
+          id: "union-left-taller",
+          text: "    if (height[root1] > height[root2])",
+        },
+        { id: "union-attach-right", text: "        parent[root2] = root1;" },
+        {
+          id: "union-right-taller",
+          text: "    else if (height[root2] > height[root1])",
+        },
+        { id: "union-attach-left", text: "        parent[root1] = root2;" },
+        { id: "union-equal", text: "    else {" },
+        { id: "union-equal-attach", text: "        parent[root2] = root1;" },
+        { id: "union-inc", text: "        height[root1]++;" },
+        { id: "union-close", text: "    }" },
+        { id: "union-return", text: "    return true;" },
+        { id: "union-end", text: "}" },
+        { id: "blank3", text: "" },
+        { id: "pair-dec-height", text: "public void decHeight() {" },
+        { id: "pair-dec-height-body", text: "    height--;" },
+        { id: "pair-dec-height-end", text: "}" },
+      ];
+
+      let dsu = makeInitial(5);
+      let steps = buildMakeSetSteps(5);
+      let stepIndex = steps.length - 1;
+      let history = ["MakeSet(5)"];
+
+      const els = {
+        nInput: document.getElementById("nInput"),
+        makeBtn: document.getElementById("makeBtn"),
+        exampleBtn: document.getElementById("exampleBtn"),
+        findInput: document.getElementById("findInput"),
+        findBtn: document.getElementById("findBtn"),
+        pathCompressionToggle: document.getElementById("pathCompressionToggle"),
+        unionA: document.getElementById("unionA"),
+        unionB: document.getElementById("unionB"),
+        unionBtn: document.getElementById("unionBtn"),
+        firstBtn: document.getElementById("firstBtn"),
+        prevBtn: document.getElementById("prevBtn"),
+        nextBtn: document.getElementById("nextBtn"),
+        lastBtn: document.getElementById("lastBtn"),
+        forestSvg: document.getElementById("forestSvg"),
+        arrayTable: document.getElementById("arrayTable"),
+        setsSummary: document.getElementById("setsSummary"),
+        codeLines: document.getElementById("codeLines"),
+        stepCount: document.getElementById("stepCount"),
+        stepTitle: document.getElementById("stepTitle"),
+        summaryBox: document.getElementById("summaryBox"),
+        summaryMain: document.getElementById("summaryMain"),
+        summaryDetail: document.getElementById("summaryDetail"),
+        history: document.getElementById("history"),
+      };
+
+      function clone(arr) {
+        return arr.slice();
+      }
+
+      function makeInitial(n) {
+        return {
+          parent: Array.from({ length: n }, (_, i) => i),
+          height: Array.from({ length: n }, () => 0),
+        };
+      }
+
+      function escapeHtml(str) {
+        return String(str)
+          .replaceAll("&", "&amp;")
+          .replaceAll("<", "&lt;")
+          .replaceAll(">", "&gt;");
+      }
+
+      function traceFind(parent, start) {
+        const path = [start];
+        let cur = start;
+        const seen = new Set([cur]);
+        while (parent[cur] !== cur) {
+          cur = parent[cur];
+          path.push(cur);
+          if (seen.has(cur)) break;
+          seen.add(cur);
+        }
+        return { root: cur, path };
+      }
+
+      function compressPath(parent, path, root) {
+        const next = clone(parent);
+        for (const node of path) {
+          if (node !== root) next[node] = root;
+        }
+        return next;
+      }
+
+      function buildMakeSetSteps(n) {
+        const state = makeInitial(n);
+        const result = [
+          {
+            title: `MakeSet(${n})`,
+            codeId: "constructor",
+            parent: clone(state.parent),
+            height: clone(state.height),
+            activeNodes: [],
+            changedParents: [],
+            changedHeights: [],
+            summary: `We create ${n} separate sets. Every node starts alone, so each node is its own root.`,
+            detail:
+              "The constructor is called. Next, we allocate the parent array and initialize every node.",
+          },
+          {
+            title: `MakeSet(${n})`,
+            codeId: "make-array",
+            parent: clone(state.parent),
+            height: clone(state.height),
+            activeNodes: [],
+            changedParents: [],
+            changedHeights: [],
+            summary:
+              "Create the array that stores the parent pointer for each node.",
+            detail:
+              "The array index is the node. The value stored there is that node's parent.",
+          },
+        ];
+
+        for (let i = 0; i < n; i++) {
+          result.push({
+            title: `Initialize node ${i}`,
+            codeId: "make-init",
+            parent: clone(state.parent),
+            height: clone(state.height),
+            activeNodes: [i],
+            changedParents: [i],
+            changedHeights: [i],
+            summary: `Node ${i} gets parent ${i} and height 0.`,
+            detail: `Because parent[${i}] = ${i}, node ${i} is a root and represents its own one-element set {${i}}.`,
+          });
+        }
+
+        result.push({
+          title: `MakeSet(${n}) complete`,
+          codeId: "constructor-end",
+          parent: clone(state.parent),
+          height: clone(state.height),
+          activeNodes: Array.from({ length: n }, (_, i) => i),
+          changedParents: [],
+          changedHeights: [],
+          summary: `Done. We now have ${n} separate trees and one parent/height array.`,
+          detail:
+            "Every tree has one node. Every node is a representative/root of its own set.",
+        });
+        return result;
+      }
+
+      function invalidStep(title, codeId, parent, height, summary, detail) {
+        return [
+          {
+            title,
+            codeId,
+            parent: clone(parent),
+            height: clone(height),
+            activeNodes: [],
+            changedParents: [],
+            changedHeights: [],
+            summary,
+            detail,
+            error: true,
+          },
+        ];
+      }
+
+      function buildFindSteps(current, id, usePathCompression) {
+        const { parent, height } = current;
+        const n = parent.length;
+        const startCode = usePathCompression ? "pc-find-start" : "find-start";
+        if (!Number.isInteger(id) || id < 0 || id >= n) {
+          const bad = invalidStep(
+            "Invalid find",
+            startCode,
+            parent,
+            height,
+            `find(${id}) is invalid because the node must be between 0 and ${n - 1}.`,
+            "Pick a valid node and try again.",
+          );
+          bad[0].usePathCompression = usePathCompression;
+          return bad;
+        }
+
+        const result = [];
+        let cur = id;
+        const path = [cur];
+        const code = usePathCompression
+          ? {
+              start: "pc-find-start",
+              check: "pc-base-if",
+              move: "pc-recursive",
+              rootReturn: "pc-base-return",
+              compressCheck: "pc-if-change",
+              compressSet: "pc-set-parent",
+              decHeight: "pc-dec-height",
+              returnFinal: "pc-return-res",
+            }
+          : {
+              start: "find-start",
+              check: "find-while",
+              move: "find-move",
+              rootReturn: "find-return",
+              compressCheck: "find-return",
+              compressSet: "find-return",
+              decHeight: "find-return",
+              returnFinal: "find-return",
+            };
+
+        result.push({
+          title: usePathCompression
+            ? `find(${id}) with path compression`
+            : `find(${id})`,
+          codeId: code.start,
+          parent: clone(parent),
+          height: clone(height),
+          activeNodes: [id],
+          pathNodes: [id],
+          changedParents: [],
+          changedHeights: [],
+          usePathCompression,
+          summary: `Start find(${id}).`,
+          detail: usePathCompression
+            ? "This version uses the recursive path-compression find: find the root first, then update visited nodes to point directly to that root."
+            : "Normal find follows parent pointers until it reaches a node whose parent is itself.",
+        });
+
+        while (parent[cur] !== cur) {
+          result.push({
+            title: usePathCompression
+              ? `Check recursive base case at ${cur}`
+              : `find(${id}) checks node ${cur}`,
+            codeId: code.check,
+            parent: clone(parent),
+            height: clone(height),
+            activeNodes: [cur, parent[cur]],
+            pathNodes: clone(path),
+            changedParents: [],
+            changedHeights: [],
+            usePathCompression,
+            summary: `parent[${cur}] = ${parent[cur]}, so ${cur} is not the root.`,
+            detail: usePathCompression
+              ? `The base case fails, so the code recursively calls find(parent[${cur}]) = find(${parent[cur]}).`
+              : `The while condition is true because ${cur} != parent[${cur}]. We move upward to ${parent[cur]}.`,
+          });
+
+          const next = parent[cur];
+          result.push({
+            title: usePathCompression
+              ? `Recursive call find(${next})`
+              : `Move upward to ${next}`,
+            codeId: code.move,
+            parent: clone(parent),
+            height: clone(height),
+            activeNodes: [cur, next],
+            pathNodes: clone([...path, next]),
+            changedParents: [],
+            changedHeights: [],
+            usePathCompression,
+            summary: usePathCompression
+              ? `Call find(${next}).`
+              : `Now id becomes ${next}.`,
+            detail: usePathCompression
+              ? `The recursive path so far is ${[...path, next].join(" → ")}.`
+              : `The current path is ${[...path, next].join(" → ")}.`,
+          });
+
+          cur = next;
+          path.push(cur);
+        }
+
+        result.push({
+          title: usePathCompression
+            ? `Base case: root is ${cur}`
+            : `find(${id}) found root ${cur}`,
+          codeId: code.rootReturn,
+          parent: clone(parent),
+          height: clone(height),
+          activeNodes: [cur],
+          pathNodes: clone(path),
+          changedParents: [],
+          changedHeights: [],
+          usePathCompression,
+          summary: `parent[${cur}] = ${cur}, so ${cur} is the root/representative.`,
+          detail: usePathCompression
+            ? `The base case returns ${cur}. Now the recursion unwinds and can compress the path.`
+            : `find(${id}) returns ${cur}. Path followed: ${path.join(" → ")}.`,
+        });
+
+        if (usePathCompression) {
+          let compressed = clone(parent);
+          const changed = [];
+          for (let i = path.length - 2; i >= 0; i--) {
+            const node = path[i];
+            result.push({
+              title: `Unwind recursion at node ${node}`,
+              codeId: code.compressCheck,
+              parent: clone(compressed),
+              height: clone(height),
+              activeNodes: [node, cur],
+              pathNodes: clone(path),
+              changedParents: [],
+              changedHeights: [],
+              usePathCompression,
+              summary: `The recursive result is res = ${cur}.`,
+              detail:
+                compressed[node] !== cur
+                  ? `Since parent[${node}] is ${compressed[node]}, not ${cur}, the code will attach ${node} directly to the root.`
+                  : `parent[${node}] is already ${cur}, so no parent pointer change is needed here.`,
+            });
+
+            if (compressed[node] !== cur) {
+              const oldParent = compressed[node];
+              compressed[node] = cur;
+              changed.push(node);
+              result.push({
+                title: `Compress parent of ${node}`,
+                codeId: code.compressSet,
+                parent: clone(compressed),
+                height: clone(height),
+                activeNodes: [node, cur],
+                pathNodes: clone(path),
+                changedParents: [node],
+                changedHeights: [],
+                usePathCompression,
+                summary: `parent[${node}] changes from ${oldParent} to ${cur}.`,
+                detail: `This is the key path-compression line: parents[${node}].setID(${cur}). Future find(${node}) is faster.`,
+              });
+
+              result.push({
+                title: `Height-adjustment line shown`,
+                codeId: code.decHeight,
+                parent: clone(compressed),
+                height: clone(height),
+                activeNodes: [cur],
+                pathNodes: clone(path),
+                changedParents: [],
+                changedHeights: [],
+                usePathCompression,
+                summary: `The uploaded professor version shows parents[${cur}].decHeight().`,
+                detail:
+                  "This app highlights that line, but does not actually decrease height/rank because many standard implementations treat rank as an estimate after compression.",
+              });
+            }
+
+            result.push({
+              title: `Return ${cur} from node ${node}`,
+              codeId: code.returnFinal,
+              parent: clone(compressed),
+              height: clone(height),
+              activeNodes: [node, cur],
+              pathNodes: clone(path),
+              changedParents: [],
+              changedHeights: [],
+              usePathCompression,
+              summary: `Return ${cur}.`,
+              detail: `The final answer for find(${id}) is still ${cur}; compression only improves the stored structure.`,
+            });
+          }
+
+          result.push({
+            title: `find(${id}) complete`,
+            codeId: code.returnFinal,
+            parent: clone(compressed),
+            height: clone(height),
+            activeNodes: [id, cur],
+            pathNodes: clone(path),
+            changedParents: changed,
+            changedHeights: [],
+            usePathCompression,
+            summary: `find(${id}) returns ${cur}.`,
+            detail: changed.length
+              ? `Path followed: ${path.join(" → ")}. Compressed: ${changed.map((node) => `parent[${node}] = ${cur}`).join(", ")}.`
+              : `Path followed: ${path.join(" → ")}. No parent pointers needed to change.`,
+          });
+        }
+
+        return result;
+      }
+
+      function appendFindTraceForUnion(result, state, id, label) {
+        const { parent, height } = state;
+        const trace = traceFind(parent, id);
+        const codeId = label === "First root" ? "union-find1" : "union-find2";
+
+        result.push({
+          title: `${label}: find(${id})`,
+          codeId,
+          parent: clone(parent),
+          height: clone(height),
+          activeNodes: [id],
+          pathNodes: [id],
+          changedParents: [],
+          changedHeights: [],
+          summary: `Union must first find the root of ${id}.`,
+          detail: `Start at node ${id}.`,
+        });
+
+        for (let i = 0; i < trace.path.length - 1; i++) {
+          const a = trace.path[i];
+          const b = trace.path[i + 1];
+          result.push({
+            title: `${label}: move ${a} → ${b}`,
+            codeId,
+            parent: clone(parent),
+            height: clone(height),
+            activeNodes: [a, b],
+            pathNodes: trace.path.slice(0, i + 2),
+            changedParents: [],
+            changedHeights: [],
+            summary: `parent[${a}] = ${b}, so keep walking upward.`,
+            detail: `Current find path: ${trace.path.slice(0, i + 2).join(" → ")}.`,
+          });
+        }
+
+        result.push({
+          title: `${label}: root is ${trace.root}`,
+          codeId,
+          parent: clone(parent),
+          height: clone(height),
+          activeNodes: [trace.root],
+          pathNodes: clone(trace.path),
+          changedParents: [],
+          changedHeights: [],
+          summary: `find(${id}) returns ${trace.root}.`,
+          detail: `The representative/root for node ${id} is ${trace.root}.`,
+        });
+
+        return trace;
+      }
+
+      function buildUnionSteps(current, a, b) {
+        const { parent, height } = current;
+        const n = parent.length;
+        if (
+          !Number.isInteger(a) ||
+          !Number.isInteger(b) ||
+          a < 0 ||
+          a >= n ||
+          b < 0 ||
+          b >= n
+        ) {
+          return invalidStep(
+            "Invalid union",
+            "union-start",
+            parent,
+            height,
+            `union(${a}, ${b}) is invalid because both nodes must be between 0 and ${n - 1}.`,
+            "Pick valid nodes and try again.",
+          );
+        }
+
+        const result = [];
+        result.push({
+          title: `union(${a}, ${b})`,
+          codeId: "union-start",
+          parent: clone(parent),
+          height: clone(height),
+          activeNodes: [a, b],
+          changedParents: [],
+          changedHeights: [],
+          summary: `Start union(${a}, ${b}).`,
+          detail:
+            "Union does not immediately connect a and b. It first finds their roots, then connects one root under the other.",
+        });
+
+        const rootTrace1 = appendFindTraceForUnion(
+          result,
+          current,
+          a,
+          "First root",
+        );
+        const rootTrace2 = appendFindTraceForUnion(
+          result,
+          current,
+          b,
+          "Second root",
+        );
+        const root1 = rootTrace1.root;
+        const root2 = rootTrace2.root;
+
+        result.push({
+          title: "Compare roots",
+          codeId: "union-same",
+          parent: clone(parent),
+          height: clone(height),
+          activeNodes: [root1, root2],
+          pathNodes: Array.from(
+            new Set([...rootTrace1.path, ...rootTrace2.path]),
+          ),
+          changedParents: [],
+          changedHeights: [],
+          summary: `root1 = ${root1}, root2 = ${root2}.`,
+          detail:
+            root1 === root2
+              ? `Both nodes already have the same root ${root1}, so they are already in the same set.`
+              : "The roots are different, so the two sets can be merged.",
+        });
+
+        if (root1 === root2) {
+          result.push({
+            title: "No union needed",
+            codeId: "union-same",
+            parent: clone(parent),
+            height: clone(height),
+            activeNodes: [a, b, root1],
+            pathNodes: Array.from(
+              new Set([...rootTrace1.path, ...rootTrace2.path]),
+            ),
+            changedParents: [],
+            changedHeights: [],
+            summary: `union(${a}, ${b}) returns false.`,
+            detail:
+              "Nothing changes because both values were already in the same set.",
+          });
+          return result;
+        }
+
+        const nextParent = clone(parent);
+        const nextHeight = clone(height);
+
+        if (height[root1] > height[root2]) {
+          result.push({
+            title: "Left/root1 tree is taller",
+            codeId: "union-left-taller",
+            parent: clone(parent),
+            height: clone(height),
+            activeNodes: [root1, root2],
+            changedParents: [],
+            changedHeights: [],
+            summary: `height[${root1}] = ${height[root1]} and height[${root2}] = ${height[root2]}.`,
+            detail: `The left/root1 tree is taller, so we keep ${root1} as root and attach ${root2} underneath it.`,
+          });
+
+          nextParent[root2] = root1;
+          result.push({
+            title: `Attach root ${root2} under root ${root1}`,
+            codeId: "union-attach-right",
+            parent: clone(nextParent),
+            height: clone(nextHeight),
+            activeNodes: [root1, root2],
+            changedParents: [root2],
+            changedHeights: [],
+            summary: `parent[${root2}] changes from ${parent[root2]} to ${root1}.`,
+            detail:
+              "No height increases because attaching a shorter tree under a taller tree does not make the taller tree taller.",
+          });
+        } else if (height[root2] > height[root1]) {
+          result.push({
+            title: "Right/root2 tree is taller",
+            codeId: "union-right-taller",
+            parent: clone(parent),
+            height: clone(height),
+            activeNodes: [root1, root2],
+            changedParents: [],
+            changedHeights: [],
+            summary: `height[${root2}] = ${height[root2]} and height[${root1}] = ${height[root1]}.`,
+            detail: `The right/root2 tree is taller, so we keep ${root2} as root and attach ${root1} underneath it.`,
+          });
+
+          nextParent[root1] = root2;
+          result.push({
+            title: `Attach root ${root1} under root ${root2}`,
+            codeId: "union-attach-left",
+            parent: clone(nextParent),
+            height: clone(nextHeight),
+            activeNodes: [root1, root2],
+            changedParents: [root1],
+            changedHeights: [],
+            summary: `parent[${root1}] changes from ${parent[root1]} to ${root2}.`,
+            detail:
+              "No height increases because attaching a shorter tree under a taller tree does not make the taller tree taller.",
+          });
+        } else {
+          result.push({
+            title: "Heights are equal",
+            codeId: "union-equal",
+            parent: clone(parent),
+            height: clone(height),
+            activeNodes: [root1, root2],
+            changedParents: [],
+            changedHeights: [],
+            summary: `height[${root1}] = ${height[root1]} and height[${root2}] = ${height[root2]}.`,
+            detail: `The heights are equal, so this version chooses the left/root1 side: ${root1}. Then it attaches ${root2} under ${root1}.`,
+          });
+
+          nextParent[root2] = root1;
+          result.push({
+            title: `Attach root ${root2} under root ${root1}`,
+            codeId: "union-equal-attach",
+            parent: clone(nextParent),
+            height: clone(nextHeight),
+            activeNodes: [root1, root2],
+            changedParents: [root2],
+            changedHeights: [],
+            summary: `parent[${root2}] changes from ${parent[root2]} to ${root1}.`,
+            detail: `Now ${root1} is the representative/root of the merged set.`,
+          });
+
+          nextHeight[root1] += 1;
+          result.push({
+            title: `Increase height of root ${root1}`,
+            codeId: "union-inc",
+            parent: clone(nextParent),
+            height: clone(nextHeight),
+            activeNodes: [root1],
+            changedParents: [],
+            changedHeights: [root1],
+            summary: `height[${root1}] increases from ${height[root1]} to ${nextHeight[root1]}.`,
+            detail:
+              "When two equal-height trees merge, the new tree becomes one level taller.",
+          });
+        }
+
+        result.push({
+          title: `union(${a}, ${b}) complete`,
+          codeId: "union-return",
+          parent: clone(nextParent),
+          height: clone(nextHeight),
+          activeNodes: [a, b],
+          changedParents: [],
+          changedHeights: [],
+          summary: `union(${a}, ${b}) returns true.`,
+          detail:
+            "The parent array and forest now represent the updated disjoint sets.",
+        });
+
+        return result;
+      }
+
+      function computeForestLayout(parent) {
+        const n = parent.length;
+        const children = Array.from({ length: n }, () => []);
+        const roots = [];
+        for (let i = 0; i < n; i++) {
+          if (parent[i] === i) roots.push(i);
+          else if (parent[i] >= 0 && parent[i] < n) children[parent[i]].push(i);
+        }
+
+        children.forEach((list) => list.sort((a, b) => a - b));
+        roots.sort((a, b) => a - b);
+
+        const positions = {};
+        let cursor = 52;
+        const levelGap = 86;
+        const leafGap = 78;
+        let maxDepth = 0;
+
+        function layoutNode(node, depth) {
+          maxDepth = Math.max(maxDepth, depth);
+          if (children[node].length === 0) {
+            positions[node] = { x: cursor, y: 54 + depth * levelGap };
+            cursor += leafGap;
+            return positions[node].x;
+          }
+
+          const childXs = children[node].map((child) =>
+            layoutNode(child, depth + 1),
+          );
+          const x = (childXs[0] + childXs[childXs.length - 1]) / 2;
+          positions[node] = { x, y: 54 + depth * levelGap };
+          return x;
+        }
+
+        for (const root of roots) {
+          layoutNode(root, 0);
+          cursor += 42;
+        }
+
+        return {
+          roots,
+          children,
+          positions,
+          width: Math.max(840, cursor + 20),
+          height: Math.max(320, 104 + maxDepth * levelGap),
+        };
+      }
+
+      function renderForest(step) {
+        const svg = els.forestSvg;
+        const parent = step.parent;
+        const height = step.height;
+        const layout = computeForestLayout(parent);
+        const active = new Set(step.activeNodes || []);
+        const changed = new Set(step.changedParents || []);
+        const path = new Set(step.pathNodes || []);
+
+        svg.setAttribute("width", layout.width);
+        svg.setAttribute("height", layout.height);
+        svg.innerHTML = "";
+
+        function svgEl(name, attrs = {}) {
+          const el = document.createElementNS(
+            "http://www.w3.org/2000/svg",
+            name,
+          );
+          for (const [k, v] of Object.entries(attrs)) el.setAttribute(k, v);
+          return el;
+        }
+
+        for (let node = 0; node < parent.length; node++) {
+          const p = parent[node];
+          if (p === node) continue;
+          const a = layout.positions[p];
+          const b = layout.positions[node];
+          if (!a || !b) continue;
+
+          const isPath = path.has(node) && path.has(p);
+          const isChanged = changed.has(node);
+
+          const line = svgEl("line", {
+            x1: a.x,
+            y1: a.y + 26,
+            x2: b.x,
+            y2: b.y - 26,
+            stroke: isChanged ? "#ea580c" : isPath ? "#2563eb" : "#94a3b8",
+            "stroke-width": isChanged || isPath ? 4 : 2,
+            "stroke-linecap": "round",
+          });
+          svg.appendChild(line);
+        }
+
+        for (let node = 0; node < parent.length; node++) {
+          const pos = layout.positions[node];
+          if (!pos) continue;
+
+          const isRoot = parent[node] === node;
+          const isActive = active.has(node);
+          const isChanged = changed.has(node);
+          const isPath = path.has(node);
+
+          const g = svgEl("g", { class: "node" });
+
+          const circle = svgEl("circle", {
+            cx: pos.x,
+            cy: pos.y,
+            r: isActive || isChanged ? 27 : 24,
+            fill: isChanged
+              ? "#fed7aa"
+              : isActive
+                ? "#dbeafe"
+                : isPath
+                  ? "#e0f2fe"
+                  : isRoot
+                    ? "#f1f5f9"
+                    : "#ffffff",
+            stroke: isChanged
+              ? "#ea580c"
+              : isActive
+                ? "#2563eb"
+                : isRoot
+                  ? "#0f172a"
+                  : "#64748b",
+            "stroke-width": isRoot || isActive || isChanged ? 3 : 2,
+          });
+
+          const label = svgEl("text", {
+            x: pos.x,
+            y: pos.y + 6,
+            "text-anchor": "middle",
+            "font-size": "16",
+          });
+          label.textContent = node;
+
+          g.appendChild(circle);
+          g.appendChild(label);
+
+          if (isRoot) {
+            const rootLabel = svgEl("text", {
+              x: pos.x,
+              y: pos.y - 36,
+              "text-anchor": "middle",
+              class: "root-label",
+            });
+            rootLabel.textContent = `h=${height[node]}`;
+            g.appendChild(rootLabel);
+          }
+
+          svg.appendChild(g);
+        }
+      }
+
+      function renderArray(step) {
+        const parent = step.parent;
+        const height = step.height;
+        const active = new Set(step.activeNodes || []);
+        const changedP = new Set(step.changedParents || []);
+        const changedH = new Set(step.changedHeights || []);
+
+        let html = "<table><thead><tr><th>Array row</th>";
+        for (let i = 0; i < parent.length; i++) {
+          html += `<th class="${active.has(i) ? "cell-active" : ""}">${i}</th>`;
+        }
+        html +=
+          "</tr></thead><tbody><tr><td class='row-label'>parent[index]</td>";
+
+        for (let i = 0; i < parent.length; i++) {
+          const cls = changedP.has(i)
+            ? "cell-changed"
+            : active.has(i)
+              ? "cell-active"
+              : "";
+          html += `<td class="${cls}">${parent[i]}</td>`;
+        }
+
+        html += "</tr><tr><td class='row-label'>height[index]</td>";
+
+        for (let i = 0; i < height.length; i++) {
+          const cls = changedH.has(i)
+            ? "cell-changed"
+            : active.has(i)
+              ? "cell-active"
+              : "";
+          html += `<td class="${cls}">${height[i]}</td>`;
+        }
+
+        html += "</tr></tbody></table>";
+        els.arrayTable.innerHTML = html;
+      }
+
+      function renderSets(step) {
+        const parent = step.parent;
+        const groups = new Map();
+
+        for (let i = 0; i < parent.length; i++) {
+          const root = traceFind(parent, i).root;
+          if (!groups.has(root)) groups.set(root, []);
+          groups.get(root).push(i);
+        }
+
+        const ordered = Array.from(groups.entries()).sort(
+          (a, b) => a[0] - b[0],
+        );
+        els.setsSummary.innerHTML = ordered
+          .map(([root, nodes]) => {
+            return `<span class="pill">root ${root}: {${nodes.join(", ")}}</span>`;
+          })
+          .join("");
+      }
+
+      function renderCode(step) {
+        const usePathCompression =
+          Boolean(step.usePathCompression) || els.pathCompressionToggle.checked;
+        const activeId = step.codeId;
+        const lines = usePathCompression
+          ? PATH_COMPRESSION_CODE_LINES
+          : CODE_LINES;
+        els.codeLines.innerHTML = lines
+          .map((line, idx) => {
+            const blank = line.text === "";
+            const cls = [
+              "code-line",
+              blank ? "blank" : "",
+              line.id === activeId ? "active" : "",
+            ].join(" ");
+            return `<div class="${cls}"><span class="line-no">${blank ? "" : idx + 1}</span><code>${escapeHtml(line.text)}</code></div>`;
+          })
+          .join("");
+      }
+
+      function renderHistory() {
+        els.history.innerHTML = history
+          .map((item) => `<span class="pill">${escapeHtml(item)}</span>`)
+          .join("");
+      }
+
+      function updateButtons() {
+        els.firstBtn.disabled = stepIndex <= 0;
+        els.prevBtn.disabled = stepIndex <= 0;
+        els.nextBtn.disabled = stepIndex >= steps.length - 1;
+        els.lastBtn.disabled = stepIndex >= steps.length - 1;
+      }
+
+      function render() {
+        const step = steps[stepIndex] || {
+          parent: dsu.parent,
+          height: dsu.height,
+          title: "Ready",
+          codeId: "constructor",
+          summary: "",
+          detail: "",
+        };
+
+        renderForest(step);
+        renderArray(step);
+        renderSets(step);
+        renderCode(step);
+        renderHistory();
+
+        els.stepCount.textContent = `Step ${stepIndex + 1} of ${steps.length}`;
+        els.stepTitle.textContent = step.title || "Ready";
+        els.summaryBox.className = `summary-box ${step.error ? "error" : ""}`;
+        els.summaryMain.textContent = step.summary || "";
+        els.summaryDetail.textContent = step.detail || "";
+        updateButtons();
+      }
+
+      function commitSteps(newSteps, commandName) {
+        steps = newSteps;
+        stepIndex = 0;
+        const last = newSteps[newSteps.length - 1];
+        dsu = { parent: clone(last.parent), height: clone(last.height) };
+        history = [commandName, ...history].slice(0, 9);
+        render();
+      }
+
+      function handleMakeSet() {
+        const raw = Number.parseInt(els.nInput.value, 10);
+        const n = Number.isFinite(raw) ? Math.max(1, Math.min(18, raw)) : 5;
+        els.nInput.value = String(n);
+        dsu = makeInitial(n);
+        steps = buildMakeSetSteps(n);
+        stepIndex = steps.length - 1;
+        history = [`MakeSet(${n})`];
+        render();
+      }
+
+      function handleFind() {
+        const id = Number.parseInt(els.findInput.value, 10);
+        const useCompression = els.pathCompressionToggle.checked;
+        const newSteps = buildFindSteps(dsu, id, useCompression);
+        commitSteps(
+          newSteps,
+          useCompression ? `find(${id}) + compression` : `find(${id})`,
+        );
+      }
+
+      function handleUnion() {
+        const a = Number.parseInt(els.unionA.value, 10);
+        const b = Number.parseInt(els.unionB.value, 10);
+        const newSteps = buildUnionSteps(dsu, a, b);
+        commitSteps(newSteps, `union(${a}, ${b})`);
+      }
+
+      function loadSlideExample() {
+        const n = 5;
+        let state = makeInitial(n);
+        const commands = [
+          [1, 3],
+          [3, 4],
+          [0, 2],
+          [2, 3],
+        ];
+        const allSteps = buildMakeSetSteps(n);
+
+        for (const [a, b] of commands) {
+          const unionSteps = buildUnionSteps(state, a, b);
+          allSteps.push(...unionSteps);
+          const last = unionSteps[unionSteps.length - 1];
+          state = { parent: clone(last.parent), height: clone(last.height) };
+        }
+
+        els.nInput.value = "5";
+        dsu = state;
+        steps = allSteps;
+        stepIndex = 0;
+        history = [
+          "Loaded slide example",
+          "union(2, 3)",
+          "union(0, 2)",
+          "union(3, 4)",
+          "union(1, 3)",
+          "MakeSet(5)",
+        ];
+        render();
+      }
+
+      els.makeBtn.addEventListener("click", handleMakeSet);
+      els.exampleBtn.addEventListener("click", loadSlideExample);
+      els.findBtn.addEventListener("click", handleFind);
+      els.unionBtn.addEventListener("click", handleUnion);
+      els.pathCompressionToggle.addEventListener("change", render);
+
+      els.firstBtn.addEventListener("click", () => {
+        stepIndex = 0;
+        render();
+      });
+
+      els.prevBtn.addEventListener("click", () => {
+        stepIndex = Math.max(0, stepIndex - 1);
+        render();
+      });
+
+      els.nextBtn.addEventListener("click", () => {
+        stepIndex = Math.min(steps.length - 1, stepIndex + 1);
+        render();
+      });
+
+      els.lastBtn.addEventListener("click", () => {
+        stepIndex = steps.length - 1;
+        render();
+      });
+
+      render();
+    </script>
+  </body>
+</html>
