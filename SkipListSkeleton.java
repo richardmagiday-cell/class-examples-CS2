@@ -2,7 +2,7 @@
 
 import java.util.*;
 
-public class Main {
+public class SkipListSkeleton {
 
 	final public static int NEG_INF = Integer.MIN_VALUE;
 	final public static int POS_INF = Integer.MAX_VALUE;
@@ -13,7 +13,7 @@ public class Main {
 	private int size;
 	
 	// Makes an empty list.
-	public Main() {
+	public SkipListSkeleton() {
 
 		// Initially, I am just one level with min and max.
 		levels = new ArrayList<node>();
@@ -110,7 +110,7 @@ public class Main {
 	public static void basicInsertTest() {
 		
 		// Create the object.
-		Main mine = new Main(); //this constructor creates a level as well
+		SkipListSkeleton mine = new SkipListSkeleton(); //this constructor creates a level as well
 		
 		// Do 100 inserts.
 		for (int i=0; i<10; i++) {
